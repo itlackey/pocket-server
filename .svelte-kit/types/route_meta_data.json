@@ -1,7 +1,19 @@
 {
 	"/": [],
+	"/api/agent/clear": [
+		"src/routes/api/agent/clear/+server.js"
+	],
+	"/api/agent/sessions": [
+		"src/routes/api/agent/sessions/+server.js"
+	],
 	"/api/agent/session": [
 		"src/routes/api/agent/session/+server.js"
+	],
+	"/api/agent/snapshot": [
+		"src/routes/api/agent/snapshot/+server.js"
+	],
+	"/api/agent/title": [
+		"src/routes/api/agent/title/+server.js"
 	],
 	"/api/auth/device/status": [
 		"src/routes/api/auth/device/status/+server.js"

@@ -19,7 +19,16 @@
 		{ path: '/auth/device/status', method: 'GET', description: 'Check device registration', params: '?deviceId=test' },
 		{ path: '/auth/pair/status', method: 'GET', description: 'Get pairing status' },
 		{ path: '/fs/list', method: 'GET', description: 'List directory contents', params: '?path=' },
+		{ path: '/fs/read', method: 'GET', description: 'Read file contents', params: '?path=' },
+		{ path: '/fs/write', method: 'POST', description: 'Write file contents' },
+		{ path: '/fs/search', method: 'GET', description: 'Search files and directories', params: '?query=' },
+		{ path: '/fs/delete', method: 'DELETE', description: 'Delete file or directory', params: '?path=' },
+		{ path: '/fs/metadata', method: 'GET', description: 'Get file metadata', params: '?path=' },
 		{ path: '/agent/session', method: 'POST', description: 'Create agent session' },
+		{ path: '/agent/sessions', method: 'GET', description: 'List agent sessions' },
+		{ path: '/agent/snapshot', method: 'GET', description: 'Get session snapshot', params: '?sessionId=' },
+		{ path: '/agent/title', method: 'PUT', description: 'Update session title' },
+		{ path: '/agent/clear', method: 'DELETE', description: 'Clear session conversation', params: '?sessionId=' },
 		{ path: 'custom', method: 'GET', description: 'Custom endpoint' }
 	];
 

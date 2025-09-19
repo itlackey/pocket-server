@@ -27,7 +27,7 @@ export {};
 
 declare module "$app/types" {
 	export interface AppTypes {
-		RouteId(): "/" | "/api" | "/api/agent" | "/api/agent/session" | "/api/auth" | "/api/auth/device" | "/api/auth/device/status" | "/api/auth/pair" | "/api/auth/pair/status" | "/api/fs" | "/api/fs/delete" | "/api/fs/list" | "/api/fs/metadata" | "/api/fs/read" | "/api/fs/search" | "/api/fs/write" | "/api/health";
+		RouteId(): "/" | "/api" | "/api/agent" | "/api/agent/clear" | "/api/agent/sessions" | "/api/agent/session" | "/api/agent/snapshot" | "/api/agent/title" | "/api/auth" | "/api/auth/device" | "/api/auth/device/status" | "/api/auth/pair" | "/api/auth/pair/status" | "/api/fs" | "/api/fs/delete" | "/api/fs/list" | "/api/fs/metadata" | "/api/fs/read" | "/api/fs/search" | "/api/fs/write" | "/api/health";
 		RouteParams(): {
 			
 		};
@@ -35,7 +35,11 @@ declare module "$app/types" {
 			"/": Record<string, never>;
 			"/api": Record<string, never>;
 			"/api/agent": Record<string, never>;
+			"/api/agent/clear": Record<string, never>;
+			"/api/agent/sessions": Record<string, never>;
 			"/api/agent/session": Record<string, never>;
+			"/api/agent/snapshot": Record<string, never>;
+			"/api/agent/title": Record<string, never>;
 			"/api/auth": Record<string, never>;
 			"/api/auth/device": Record<string, never>;
 			"/api/auth/device/status": Record<string, never>;
@@ -50,7 +54,7 @@ declare module "$app/types" {
 			"/api/fs/write": Record<string, never>;
 			"/api/health": Record<string, never>
 		};
-		Pathname(): "/" | "/api" | "/api/" | "/api/agent" | "/api/agent/" | "/api/agent/session" | "/api/agent/session/" | "/api/auth" | "/api/auth/" | "/api/auth/device" | "/api/auth/device/" | "/api/auth/device/status" | "/api/auth/device/status/" | "/api/auth/pair" | "/api/auth/pair/" | "/api/auth/pair/status" | "/api/auth/pair/status/" | "/api/fs" | "/api/fs/" | "/api/fs/delete" | "/api/fs/delete/" | "/api/fs/list" | "/api/fs/list/" | "/api/fs/metadata" | "/api/fs/metadata/" | "/api/fs/read" | "/api/fs/read/" | "/api/fs/search" | "/api/fs/search/" | "/api/fs/write" | "/api/fs/write/" | "/api/health" | "/api/health/";
+		Pathname(): "/" | "/api" | "/api/" | "/api/agent" | "/api/agent/" | "/api/agent/clear" | "/api/agent/clear/" | "/api/agent/sessions" | "/api/agent/sessions/" | "/api/agent/session" | "/api/agent/session/" | "/api/agent/snapshot" | "/api/agent/snapshot/" | "/api/agent/title" | "/api/agent/title/" | "/api/auth" | "/api/auth/" | "/api/auth/device" | "/api/auth/device/" | "/api/auth/device/status" | "/api/auth/device/status/" | "/api/auth/pair" | "/api/auth/pair/" | "/api/auth/pair/status" | "/api/auth/pair/status/" | "/api/fs" | "/api/fs/" | "/api/fs/delete" | "/api/fs/delete/" | "/api/fs/list" | "/api/fs/list/" | "/api/fs/metadata" | "/api/fs/metadata/" | "/api/fs/read" | "/api/fs/read/" | "/api/fs/search" | "/api/fs/search/" | "/api/fs/write" | "/api/fs/write/" | "/api/health" | "/api/health/";
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): string & {};
 	}

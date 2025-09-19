@@ -1,10 +1,10 @@
 /**
  * Agent session creation endpoint  
- * Converted from Hono to SvelteKit API route
+ * Converted from Hono to SvelteKit API route with working session store
  */
 
 import { json } from '@sveltejs/kit';
-import crypto from 'crypto';
+import { sessionStoreFs } from '$lib/agent/store/session-store-fs.js';
 
 /**
  * Create a new agent session
@@ -13,17 +13,24 @@ import crypto from 'crypto';
 export async function POST({ request }) {
 	try {
 		const body = await request.json().catch(() => ({}));
-		const { workingDir = process.cwd(), maxMode = false } = body || {};
+		const { workingDir = process.cwd(), maxMode = false, title } = body || {};
 		
-		// TODO: Import and use converted sessionStoreFs
-		// For now, create a simple session ID
-		const id = crypto.randomUUID();
+		// Initialize store if needed
+		await sessionStoreFs.init();
+		
+		// Create session using converted store
+		const id = await sessionStoreFs.createSession({
+			workingDir,
+			maxMode,
+			title
+		});
 		
 		return json({ 
 			id,
 			workingDir,
 			maxMode,
-			message: 'Session created (placeholder implementation)'
+			title: title || 'New Chat',
+			message: 'Session created successfully'
 		});
 	} catch (error) {
 		return json(
