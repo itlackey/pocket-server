@@ -6,7 +6,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node build/index.js",
-    "run": "node src/cli.js",
+    "run:cli": "node src/cli.js",
     "test": "vitest",
     "rebuild:native": "npm rebuild node-pty",
     "lint": "npx -p @biomejs/biome@2.2.0 biome check --reporter=summary --max-diagnostics=0 .",

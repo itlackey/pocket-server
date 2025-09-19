@@ -1,10 +1,16 @@
 {
 	"/": [],
+	"/api/agent/session": [
+		"src/routes/api/agent/session/+server.js"
+	],
 	"/api/auth/device/status": [
 		"src/routes/api/auth/device/status/+server.js"
 	],
 	"/api/auth/pair/status": [
 		"src/routes/api/auth/pair/status/+server.js"
+	],
+	"/api/fs/list": [
+		"src/routes/api/fs/list/+server.js"
 	],
 	"/api/health": [
 		"src/routes/api/health/+server.js"

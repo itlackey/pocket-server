@@ -1,11 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<title>%sveltekit.title%</title>
-		%sveltekit.head%
-	</head>
-	<body>
-		<div>%sveltekit.body%</div>
-	</body>
-</html>
+<script>
+	// Layout component for Pocket Server
+	import '../app.html';
+</script>
+
+<svelte:head>
+	<title>Pocket Server</title>
+</svelte:head>
+
+<main>
+	<slot />
+</main>
