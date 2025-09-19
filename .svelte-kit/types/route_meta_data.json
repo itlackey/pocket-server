@@ -41,5 +41,14 @@
 	],
 	"/api/health": [
 		"src/routes/api/health/+server.js"
+	],
+	"/api/terminal/create": [
+		"src/routes/api/terminal/create/+server.js"
+	],
+	"/api/terminal/execute": [
+		"src/routes/api/terminal/execute/+server.js"
+	],
+	"/api/terminal/sessions": [
+		"src/routes/api/terminal/sessions/+server.js"
 	]
 }

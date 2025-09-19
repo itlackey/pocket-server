@@ -8,12 +8,16 @@
 	import AuthPanel from '$lib/components/AuthPanel.svelte';
 	import ApiExplorer from '$lib/components/ApiExplorer.svelte';
 	import FileSystemBrowser from '$lib/components/FileSystemBrowser.svelte';
+	import TerminalManager from '$lib/components/TerminalManager.svelte';
+	import AgentManager from '$lib/components/AgentManager.svelte';
 
 	let activeTab = $state('overview');
 
 	const tabs = [
 		{ id: 'overview', label: '📊 Overview', icon: '📊' },
 		{ id: 'filesystem', label: '📁 File System', icon: '📁' },
+		{ id: 'terminal', label: '🖥️ Terminal', icon: '🖥️' },
+		{ id: 'agent', label: '🤖 Agent', icon: '🤖' },
 		{ id: 'websocket', label: '🔌 WebSocket', icon: '🔌' },
 		{ id: 'auth', label: '🔐 Authentication', icon: '🔐' },
 		{ id: 'api', label: '🔍 API Explorer', icon: '🔍' }
@@ -71,6 +75,14 @@
 		{:else if activeTab === 'filesystem'}
 			<div class="single-panel">
 				<FileSystemBrowser />
+			</div>
+		{:else if activeTab === 'terminal'}
+			<div class="single-panel">
+				<TerminalManager />
+			</div>
+		{:else if activeTab === 'agent'}
+			<div class="single-panel">
+				<AgentManager />
 			</div>
 		{:else if activeTab === 'websocket'}
 			<div class="single-panel">
