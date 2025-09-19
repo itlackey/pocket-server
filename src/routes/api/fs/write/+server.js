@@ -1,21 +1,28 @@
 /**
- * File system list endpoint
- * Lists directory contents with full file system service
+ * File system write endpoint
+ * Writes file contents
  */
 
 import { json } from '@sveltejs/kit';
-import { homedir } from 'os';
 import { fileSystemService } from '$lib/file-system/service.js';
 
 /**
- * List directory contents
+ * Write file contents
  * @type {import('./$types').RequestHandler}
  */
-export async function GET({ url }) {
+export async function POST({ request }) {
 	try {
-		const path = url.searchParams.get('path') || homedir();
+		const body = await request.json();
+		const { path, content } = body;
 		
-		const result = await fileSystemService.list(path);
+		if (!path || content === undefined) {
+			return json(
+				{ error: 'Path and content parameters required' },
+				{ status: 400 }
+			);
+		}
+		
+		const result = await fileSystemService.write(path, content);
 		
 		if (!result.ok) {
 			return json(

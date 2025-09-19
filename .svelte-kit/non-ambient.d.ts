@@ -27,7 +27,7 @@ export {};
 
 declare module "$app/types" {
 	export interface AppTypes {
-		RouteId(): "/" | "/api" | "/api/agent" | "/api/agent/session" | "/api/auth" | "/api/auth/device" | "/api/auth/device/status" | "/api/auth/pair" | "/api/auth/pair/status" | "/api/fs" | "/api/fs/list" | "/api/health";
+		RouteId(): "/" | "/api" | "/api/agent" | "/api/agent/session" | "/api/auth" | "/api/auth/device" | "/api/auth/device/status" | "/api/auth/pair" | "/api/auth/pair/status" | "/api/fs" | "/api/fs/delete" | "/api/fs/list" | "/api/fs/metadata" | "/api/fs/read" | "/api/fs/search" | "/api/fs/write" | "/api/health";
 		RouteParams(): {
 			
 		};
@@ -42,10 +42,15 @@ declare module "$app/types" {
 			"/api/auth/pair": Record<string, never>;
 			"/api/auth/pair/status": Record<string, never>;
 			"/api/fs": Record<string, never>;
+			"/api/fs/delete": Record<string, never>;
 			"/api/fs/list": Record<string, never>;
+			"/api/fs/metadata": Record<string, never>;
+			"/api/fs/read": Record<string, never>;
+			"/api/fs/search": Record<string, never>;
+			"/api/fs/write": Record<string, never>;
 			"/api/health": Record<string, never>
 		};
-		Pathname(): "/" | "/api" | "/api/" | "/api/agent" | "/api/agent/" | "/api/agent/session" | "/api/agent/session/" | "/api/auth" | "/api/auth/" | "/api/auth/device" | "/api/auth/device/" | "/api/auth/device/status" | "/api/auth/device/status/" | "/api/auth/pair" | "/api/auth/pair/" | "/api/auth/pair/status" | "/api/auth/pair/status/" | "/api/fs" | "/api/fs/" | "/api/fs/list" | "/api/fs/list/" | "/api/health" | "/api/health/";
+		Pathname(): "/" | "/api" | "/api/" | "/api/agent" | "/api/agent/" | "/api/agent/session" | "/api/agent/session/" | "/api/auth" | "/api/auth/" | "/api/auth/device" | "/api/auth/device/" | "/api/auth/device/status" | "/api/auth/device/status/" | "/api/auth/pair" | "/api/auth/pair/" | "/api/auth/pair/status" | "/api/auth/pair/status/" | "/api/fs" | "/api/fs/" | "/api/fs/delete" | "/api/fs/delete/" | "/api/fs/list" | "/api/fs/list/" | "/api/fs/metadata" | "/api/fs/metadata/" | "/api/fs/read" | "/api/fs/read/" | "/api/fs/search" | "/api/fs/search/" | "/api/fs/write" | "/api/fs/write/" | "/api/health" | "/api/health/";
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): string & {};
 	}

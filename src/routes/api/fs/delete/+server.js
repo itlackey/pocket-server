@@ -1,21 +1,27 @@
 /**
- * File system list endpoint
- * Lists directory contents with full file system service
+ * File system delete endpoint
+ * Deletes files or directories
  */
 
 import { json } from '@sveltejs/kit';
-import { homedir } from 'os';
 import { fileSystemService } from '$lib/file-system/service.js';
 
 /**
- * List directory contents
+ * Delete file or directory
  * @type {import('./$types').RequestHandler}
  */
-export async function GET({ url }) {
+export async function DELETE({ url }) {
 	try {
-		const path = url.searchParams.get('path') || homedir();
+		const path = url.searchParams.get('path');
 		
-		const result = await fileSystemService.list(path);
+		if (!path) {
+			return json(
+				{ error: 'Path parameter required' },
+				{ status: 400 }
+			);
+		}
+		
+		const result = await fileSystemService.delete(path);
 		
 		if (!result.ok) {
 			return json(
@@ -24,7 +30,7 @@ export async function GET({ url }) {
 			);
 		}
 		
-		return json(result.value);
+		return json({ success: true });
 	} catch (error) {
 		return json(
 			{ error: error.message },

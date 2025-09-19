@@ -1,21 +1,27 @@
 /**
- * File system list endpoint
- * Lists directory contents with full file system service
+ * File system read endpoint
+ * Reads file contents
  */
 
 import { json } from '@sveltejs/kit';
-import { homedir } from 'os';
 import { fileSystemService } from '$lib/file-system/service.js';
 
 /**
- * List directory contents
+ * Read file contents
  * @type {import('./$types').RequestHandler}
  */
 export async function GET({ url }) {
 	try {
-		const path = url.searchParams.get('path') || homedir();
+		const path = url.searchParams.get('path');
 		
-		const result = await fileSystemService.list(path);
+		if (!path) {
+			return json(
+				{ error: 'Path parameter required' },
+				{ status: 400 }
+			);
+		}
+		
+		const result = await fileSystemService.read(path);
 		
 		if (!result.ok) {
 			return json(

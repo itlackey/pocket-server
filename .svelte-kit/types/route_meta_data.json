@@ -9,8 +9,23 @@
 	"/api/auth/pair/status": [
 		"src/routes/api/auth/pair/status/+server.js"
 	],
+	"/api/fs/delete": [
+		"src/routes/api/fs/delete/+server.js"
+	],
 	"/api/fs/list": [
 		"src/routes/api/fs/list/+server.js"
+	],
+	"/api/fs/metadata": [
+		"src/routes/api/fs/metadata/+server.js"
+	],
+	"/api/fs/read": [
+		"src/routes/api/fs/read/+server.js"
+	],
+	"/api/fs/search": [
+		"src/routes/api/fs/search/+server.js"
+	],
+	"/api/fs/write": [
+		"src/routes/api/fs/write/+server.js"
 	],
 	"/api/health": [
 		"src/routes/api/health/+server.js"

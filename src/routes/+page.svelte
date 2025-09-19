@@ -7,11 +7,13 @@
 	import WebSocketMonitor from '$lib/components/WebSocketMonitor.svelte';
 	import AuthPanel from '$lib/components/AuthPanel.svelte';
 	import ApiExplorer from '$lib/components/ApiExplorer.svelte';
+	import FileSystemBrowser from '$lib/components/FileSystemBrowser.svelte';
 
 	let activeTab = $state('overview');
 
 	const tabs = [
 		{ id: 'overview', label: '📊 Overview', icon: '📊' },
+		{ id: 'filesystem', label: '📁 File System', icon: '📁' },
 		{ id: 'websocket', label: '🔌 WebSocket', icon: '🔌' },
 		{ id: 'auth', label: '🔐 Authentication', icon: '🔐' },
 		{ id: 'api', label: '🔍 API Explorer', icon: '🔍' }
@@ -65,6 +67,10 @@
 				<div class="overview-section">
 					<AuthPanel />
 				</div>
+			</div>
+		{:else if activeTab === 'filesystem'}
+			<div class="single-panel">
+				<FileSystemBrowser />
 			</div>
 		{:else if activeTab === 'websocket'}
 			<div class="single-panel">
