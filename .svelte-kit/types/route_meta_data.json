@@ -1,5 +1,11 @@
 {
 	"/": [],
+	"/api/auth/device/status": [
+		"src/routes/api/auth/device/status/+server.js"
+	],
+	"/api/auth/pair/status": [
+		"src/routes/api/auth/pair/status/+server.js"
+	],
 	"/api/health": [
 		"src/routes/api/health/+server.js"
 	]

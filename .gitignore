@@ -11,6 +11,11 @@ dist/
 build/
 *.tsbuildinfo
 
+# SvelteKit
+.svelte-kit/
+.vercel/
+.vite/
+
 # Environment variables
 .env
 .env.local
