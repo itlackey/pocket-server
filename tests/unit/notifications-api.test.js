@@ -1,13 +1,13 @@
 import { expect, test, describe } from 'vitest';
 
 /**
- * Phase 4 API Tests
- * Tests for Phase 4 API endpoints
+ * Notifications API Tests
+ * Tests for notifications API endpoints
  */
 
 const BASE_URL = 'http://localhost:3000';
 
-describe('Phase 4 API Endpoints', () => {
+describe('Notifications API Endpoints', () => {
   describe('Notifications API', () => {
     test('Status endpoint requires authentication', async () => {
       const response = await fetch(`${BASE_URL}/api/notifications`);

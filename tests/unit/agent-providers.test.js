@@ -1,13 +1,13 @@
 import { expect, test, describe } from 'vitest';
 
 /**
- * Phase 5 Functionality Tests
+ * Agent Providers Tests
  * Tests for OpenAI integration and provider switching
  */
 
 const BASE_URL = 'http://localhost:3000';
 
-describe('Phase 5: OpenAI Alternative Provider', () => {
+describe('OpenAI Alternative Provider', () => {
   describe('Provider Management API', () => {
     test('Providers status endpoint works', async () => {
       const response = await fetch(`${BASE_URL}/api/agent/providers`);
