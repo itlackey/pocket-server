@@ -1,3 +1,8 @@
+import { TerminalManager } from '$lib/terminal/terminal-manager.js';
+
+// Create singleton instance
+const terminalManager = new TerminalManager();
+
 /**
  * @type {import('./$types').RequestHandler}
  */
@@ -13,13 +18,24 @@ export async function POST({ request }) {
 			});
 		}
 
-		// Mock command execution
-		// In a full implementation, this would execute the command in the PTY session
-		const mockOutput = `Executed: ${command}\nMock output for demonstration\n`;
+		// Check if session exists
+		const session = terminalManager.get(sessionId);
+		if (!session) {
+			return new Response(JSON.stringify({ error: 'Terminal session not found' }), {
+				status: 404,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+
+		// Execute command in terminal session
+		// Add newline to actually execute the command
+		const commandWithNewline = command.endsWith('\n') ? command : command + '\n';
+		terminalManager.write(sessionId, commandWithNewline);
 		
 		return new Response(JSON.stringify({ 
-			output: mockOutput,
-			exitCode: 0
+			success: true,
+			message: `Command sent to terminal ${sessionId}`,
+			command: command
 		}), {
 			headers: { 'Content-Type': 'application/json' }
 		});
