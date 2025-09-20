@@ -8,6 +8,15 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { generateSystemPrompt } from './prompt.js';
+import { processStream } from './streaming.js';
+import { logger } from '$lib/shared/logger.js';
+import { bashToolDefinition, executeBash } from './tools/bash.js';
+import { editorToolDefinition, executeEditor } from './tools/editor.js';
+import { webSearchToolDefinition, executeWebSearch } from './tools/web-search.js';
+import { workPlanToolDefinition, executeWorkPlan } from './tools/work-plan.js';
+import { loadProjectContext } from '../context/loader.js';
+import { generateConversationTitle } from '../core/title.js';
 
 /**
  * @typedef {Object} ConversationMessage
@@ -160,7 +169,7 @@ export class AnthropicService {
           },
           settings: {
             maxTokens: 4096,
-            tools: [] // Will be populated with tool definitions
+            tools: [bashToolDefinition, editorToolDefinition, webSearchToolDefinition, workPlanToolDefinition]
           }
         },
         streamingState: {
@@ -216,28 +225,15 @@ export class AnthropicService {
       phase: 'starting' 
     });
     
-    // Generate title for first message
+    // Generate title for first message and persist
     if (session.conversation.messages.length === 0) {
+      const title = await generateConversationTitle(content, apiKey);
+      session.conversation.title = title;
       try {
-        const title = await this.generateConversationTitle(content, apiKey);
-        session.conversation.title = title;
-        
-        // Try to persist title using session store
-        try {
-          const { sessionStoreFs } = await import('../store/session-store-fs.js');
-          await sessionStoreFs.updateTitle(sessionId, title);
-        } catch (e) {
-          console.warn('Could not persist title:', e.message);
-        }
-        
-        onMessage({ 
-          type: 'agent:title', 
-          sessionId, 
-          title 
-        });
-      } catch (e) {
-        console.warn('Could not generate title:', e.message);
-      }
+        const { sessionStoreFs } = await import('../store/session-store-fs.js');
+        await sessionStoreFs.updateTitle(sessionId, title);
+      } catch {}
+      onMessage({ type: 'agent:title', sessionId, title });
     }
 
     // Add user message to conversation
@@ -247,23 +243,31 @@ export class AnthropicService {
     });
     session.conversation.updatedAt = new Date();
     
-    // Try to persist user message
     try {
       const { sessionStoreFs } = await import('../store/session-store-fs.js');
       await sessionStoreFs.recordUserMessage(sessionId, content, { workingDir, maxMode });
-    } catch (e) {
-      console.warn('Could not persist user message:', e.message);
-    }
+    } catch {}
     
     session.phase = 'ready';
-    onMessage({ 
-      type: 'agent:status', 
-      sessionId, 
-      phase: 'ready' 
-    });
+    onMessage({ type: 'agent:status', sessionId, phase: 'ready' });
 
-    // Basic system prompt (simplified for now)
-    const systemPrompt = this.generateSystemPrompt(workingDir, session.projectContext);
+    // Resolve project context once on first user message
+    if (session.conversation.messages.length === 1 && !session.projectContext) {
+      try {
+        const ctx = await loadProjectContext(workingDir);
+        if (ctx) {
+          session.projectContext = { source: ctx.source, path: ctx.path, content: ctx.content };
+        }
+      } catch {}
+    }
+
+    // Create system prompt
+    const systemPrompt = this.generateSystemPrompt({
+      workingDirectory: workingDir,
+      projectContext: session.projectContext
+        ? { sourcePath: session.projectContext.path, content: session.projectContext.content }
+        : undefined,
+    });
 
     try {
       // Store reference to current stream for potential cancellation
@@ -273,81 +277,58 @@ export class AnthropicService {
       session.currentStreamController = new AbortController();
 
       const anthropic = this.initClient(apiKey);
-      
-      // Basic conversation without tools for now
-      console.log(`[AnthropicService] Starting conversation for session: ${sessionId}`);
-      
-      session.phase = 'streaming';
-      onMessage({ 
-        type: 'agent:status', 
-        sessionId, 
-        phase: 'streaming' 
+
+      logger.debug('AnthropicService', `Starting conversation for session: ${sessionId}`, {
+        hasTools: session.conversation.settings.tools.length > 0,
+        maxMode: session.maxMode
       });
 
-      // Start streaming
-      session.streamingState.isStreaming = true;
-      session.streamingState.contentBlocks = [];
-      session.streamingState.activeBlockContent = '';
-
-      const stream = anthropic.messages.stream({
+      // Create stream config
+      const streamConfig = {
         model: 'claude-3-5-sonnet-20241022',
         max_tokens: 4096,
         system: systemPrompt,
-        messages: session.conversation.messages
-      });
+        messages: session.conversation.messages,
+        tools: session.conversation.settings.tools
+      };
 
-      let assistantContent = '';
+      // Process stream using the original pattern
+      const streamingState = await processStream(
+        sessionId,
+        workingDir,
+        maxMode,
+        !maxMode, // chatMode = !maxMode
+        onMessage,
+        async (request) => {
+          // Send tool request to client
+          onMessage({
+            type: 'agent:tool_request',
+            sessionId,
+            content: `Tool request: ${request.description}`,
+            toolRequest: request
+          });
+          // Track pending tool for snapshot/status
+          session.pendingTools = [...(session.pendingTools || []), request];
+          session.phase = 'awaiting_tool';
+        },
+        async (toolId, output, isError) => {
+          // Process tool result by adding to conversation and continuing
+          await this.addToolResultToConversation(session, toolId, output, isError, apiKey, onMessage);
+        },
+        anthropic,
+        streamConfig,
+        (state) => {
+          session.streamingState = state;
+          session.lastActivity = new Date();
+          session.phase = state.isStreaming ? 'streaming' : (state.error ? 'error' : 'ready');
+        }
+      );
 
-      stream.on('text', (text) => {
-        assistantContent += text;
-        session.streamingState.activeBlockContent = assistantContent;
-        
-        onMessage({
-          type: 'agent:assistant',
-          sessionId,
-          content: text,
-          isComplete: false
-        });
-      });
+      // Update session
+      session.streamingState = streamingState;
 
-      stream.on('end', () => {
-        session.streamingState.isStreaming = false;
-        session.streamingState.contentBlocks = [{ type: 'text', text: assistantContent }];
-        session.phase = 'ready';
-        
-        // Add assistant message to conversation
-        session.conversation.messages.push({
-          role: 'assistant',
-          content: assistantContent
-        });
-        session.conversation.updatedAt = new Date();
-        
-        onMessage({
-          type: 'agent:assistant',
-          sessionId,
-          content: '',
-          isComplete: true
-        });
-        
-        onMessage({ 
-          type: 'agent:status', 
-          sessionId, 
-          phase: 'ready' 
-        });
-      });
-
-      stream.on('error', (error) => {
-        console.error(`[AnthropicService] Stream error:`, error);
-        session.streamingState.isStreaming = false;
-        session.streamingState.error = error.message;
-        session.phase = 'error';
-        
-        onMessage({
-          type: 'agent:error',
-          sessionId,
-          error: error.message
-        });
-      });
+      // Session updated by processStream callbacks
+      session.lastActivity = new Date();
 
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -377,58 +358,195 @@ export class AnthropicService {
    * @param {ProjectContext} [projectContext] - Project context
    * @returns {string} System prompt
    */
-  generateSystemPrompt(workingDir, projectContext) {
-    let prompt = `You are Claude, an AI assistant created by Anthropic. You are helpful, harmless, and honest.
+  generateSystemPrompt(params) {
+    // Use the imported prompt generator with fallback to simple prompt
+    try {
+      return generateSystemPrompt(params);
+    } catch (e) {
+      // Fallback to simple prompt if the imported function fails
+      const workingDir = params.workingDirectory || params.workingDir;
+      const projectContext = params.projectContext;
+
+      let prompt = `You are Claude, an AI assistant created by Anthropic. You are helpful, harmless, and honest.
 
 Current working directory: ${workingDir}`;
 
-    if (projectContext) {
-      prompt += `\n\nProject context from ${projectContext.path}:\n${projectContext.content.slice(0, 2000)}`;
-    }
+      if (projectContext) {
+        prompt += `\n\nProject context from ${projectContext.sourcePath || projectContext.path}:\n${projectContext.content.slice(0, 2000)}`;
+      }
 
-    return prompt;
+      return prompt;
+    }
   }
 
+
+
   /**
-   * Generate conversation title
-   * @param {string} message - First message
-   * @param {string} apiKey - Anthropic API key
-   * @returns {Promise<string>} Generated title
+   * Add tool result to conversation and continue
+   * @param {AgentSession} session - Session
+   * @param {string} toolId - Tool ID
+   * @param {string} output - Tool output
+   * @param {boolean} isError - Whether output is an error
+   * @param {string} apiKey - API key
+   * @param {function} onMessage - Message callback
    */
-  async generateConversationTitle(message, apiKey) {
-    try {
-      const anthropic = this.initClient(apiKey);
-      
-      const response = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 50,
-        system: 'Generate a short, descriptive title (max 5 words) for this conversation based on the user\'s first message. Respond with only the title, no quotes or extra text.',
-        messages: [{ role: 'user', content: message }]
-      });
+  async addToolResultToConversation(session, toolId, output, isError, apiKey, onMessage) {
+    // Add tool result to conversation
+    const toolResultBlock = {
+      type: 'tool_result',
+      tool_use_id: toolId,
+      content: output,
+      is_error: isError
+    };
 
-      const title = response.content[0]?.text?.trim() || 'New Conversation';
-      return title.length > 50 ? title.slice(0, 47) + '...' : title;
-    } catch (error) {
-      console.warn('Could not generate title:', error.message);
-      return 'New Conversation';
-    }
+    session.conversation.messages.push({
+      role: 'user',
+      content: [toolResultBlock]
+    });
+    session.conversation.updatedAt = new Date();
+
+    // Continue the conversation with the tool result
+    return this.processMessage(
+      {
+        type: 'agent:continue',
+        sessionId: session.id,
+        workingDir: session.workingDir,
+        maxMode: session.maxMode
+      },
+      apiKey,
+      onMessage
+    );
   }
 
   /**
-   * Process tool response from client (placeholder)
+   * Process tool response from client
    * @param {ClientMessage} message - Client message with tool response
    * @param {string} apiKey - Anthropic API key
    * @param {function(ServerMessage): void} onMessage - Message callback
    * @returns {Promise<void>}
    */
   async processToolResponse(message, apiKey, onMessage) {
-    // TODO: Implement tool response processing
-    const { sessionId } = message;
-    onMessage({
-      type: 'agent:error',
-      sessionId,
-      error: 'Tool response processing not yet implemented'
-    });
+    const { sessionId, toolResponse } = message;
+    const session = this.sessions.get(sessionId);
+
+    if (!session) {
+      onMessage({
+        type: 'agent:error',
+        sessionId,
+        error: 'Session not found'
+      });
+      return;
+    }
+
+    if (!toolResponse || !toolResponse.id) {
+      onMessage({
+        type: 'agent:error',
+        sessionId,
+        error: 'Invalid tool response'
+      });
+      return;
+    }
+
+    // Find the pending tool request
+    const toolRequestIndex = session.pendingTools.findIndex(t => t.id === toolResponse.id);
+
+    if (toolRequestIndex === -1) {
+      onMessage({
+        type: 'agent:error',
+        sessionId,
+        error: 'Tool request not found'
+      });
+      return;
+    }
+
+    const toolRequest = session.pendingTools[toolRequestIndex];
+    session.pendingTools.splice(toolRequestIndex, 1);
+
+    if (!toolResponse.approved) {
+      // Tool was rejected
+      onMessage({
+        type: 'agent:tool_rejected',
+        sessionId,
+        toolRequest
+      });
+
+      // Add rejection to conversation
+      session.conversation.messages.push({
+        role: 'user',
+        content: `Tool use rejected: ${toolRequest.name}`
+      });
+
+      // Continue conversation
+      return this.processMessage(
+        {
+          type: 'agent:continue',
+          sessionId,
+          content: `The ${toolRequest.name} tool use was not approved. Please continue without it.`,
+          workingDir: session.workingDir,
+          maxMode: session.maxMode
+        },
+        apiKey,
+        onMessage
+      );
+    }
+
+    // Execute the approved tool
+    try {
+      const result = await toolRegistry.execute(
+        sessionId,
+        toolRequest.name,
+        toolRequest.input,
+        session.workingDir
+      );
+
+      onMessage({
+        type: 'agent:tool_output',
+        sessionId,
+        toolOutput: {
+          id: toolRequest.id,
+          name: toolRequest.name,
+          output: result.success ? result.result : `Error: ${result.error}`
+        }
+      });
+
+      // Add tool result to conversation
+      const toolResultBlock = {
+        type: 'tool_result',
+        tool_use_id: toolRequest.id,
+        content: result.success ? String(result.result) : `Error: ${result.error}`,
+        is_error: !result.success
+      };
+
+      // Continue the conversation with the tool result
+      session.conversation.messages.push({
+        role: 'user',
+        content: [toolResultBlock]
+      });
+
+      // Continue streaming with the tool result
+      return this.processMessage(
+        {
+          type: 'agent:continue',
+          sessionId,
+          workingDir: session.workingDir,
+          maxMode: session.maxMode
+        },
+        apiKey,
+        onMessage
+      );
+
+    } catch (error) {
+      logger.error('AnthropicService', 'Tool execution failed', {
+        error: error.message,
+        tool: toolRequest.name
+      });
+
+      onMessage({
+        type: 'agent:error',
+        sessionId,
+        error: `Tool execution failed: ${error.message}`
+      });
+    }
   }
 
   /**

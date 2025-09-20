@@ -5,7 +5,7 @@ import { expect, test } from 'vitest';
  * Tests all API endpoints for correct responses and data structure
  */
 
-const BASE_URL = 'http://localhost:5173';
+const BASE_URL = 'http://localhost:3000';
 
 test('Health endpoint returns system information', async () => {
 	const response = await fetch(`${BASE_URL}/api/health`);

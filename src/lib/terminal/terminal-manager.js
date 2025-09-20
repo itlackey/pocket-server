@@ -7,11 +7,7 @@ import { EventEmitter } from 'events';
 import * as pty from 'node-pty';
 import { logger } from '../shared/logger.js';
 
-/**
- * @typedef {import('./types.js').TerminalSession} TerminalSession
- * @typedef {import('./types.js').TerminalFrame} TerminalFrame
- * @typedef {import('./types.js').TerminalExit} TerminalExit
- */
+
 
 /**
  * @typedef {TerminalSession & { pty: pty.IPty }} PTYSession
