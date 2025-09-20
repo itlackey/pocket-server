@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository includes a comprehensive Playwright E2E test suite that validates all UI features of the SvelteKit-converted Pocket Server dashboard. The tests are organized into three main files covering different aspects of the application.
+This repository includes a comprehensive Playwright E2E test suite that validates all UI features of the SvelteKit-converted Dispatch Server dashboard. The tests are organized into three main files covering different aspects of the application.
 
 ## Test Files
 

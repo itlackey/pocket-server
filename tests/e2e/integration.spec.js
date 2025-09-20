@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
 test.describe('UI Component Integration Tests', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await expect(page.locator('h1')).toContainText('Pocket Server');
+		await expect(page.locator('h1')).toContainText('Dispatch Server');
 	});
 
 	test('System Health component displays real-time data', async ({ page }) => {
@@ -408,7 +408,7 @@ test.describe('UI Component Integration Tests', () => {
 		await page.keyboard.press('Escape');
 		
 		// Should still be functional
-		await expect(page.locator('h1')).toContainText('Pocket Server');
+		await expect(page.locator('h1')).toContainText('Dispatch Server');
 		
 		// Test focus management
 		const firstButton = page.locator('button').first();

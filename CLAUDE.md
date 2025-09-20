@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pocket Server is a SvelteKit application that provides a WebSocket server with AI agent capabilities, file system operations, and terminal management. It serves as the backend for the Pocket Agent mobile app, enabling mobile control of coding agents, terminals, and file operations.
+Dispatch Server is a SvelteKit application that provides a WebSocket server with AI agent capabilities, file system operations, and terminal management. It serves as the backend for the Pocket Agent mobile app, enabling mobile control of coding agents, terminals, and file operations.
 
 ## Architecture
 

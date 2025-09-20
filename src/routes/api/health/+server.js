@@ -1,5 +1,5 @@
 /**
- * Health check endpoint for Pocket Server
+ * Health check endpoint for Dispatch Server
  * Converted from Hono to SvelteKit API route
  */
 

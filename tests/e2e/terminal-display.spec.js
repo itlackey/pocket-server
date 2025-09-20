@@ -9,7 +9,7 @@ test.describe('Terminal Display Issues', () => {
 	test.beforeEach(async ({ page }) => {
 		// Navigate to the dashboard and go to terminal tab
 		await page.goto('/');
-		await expect(page.locator('h1')).toContainText('Pocket Server');
+		await expect(page.locator('h1')).toContainText('Dispatch Server');
 
 		// Navigate to Terminal tab
 		await page.locator('.nav-tab .tab-label:has-text("Terminal")').click();

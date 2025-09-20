@@ -1,5 +1,5 @@
 <!--
-	Pocket Server Dashboard
+	Dispatch Server Dashboard
 	Modern SvelteKit UI using Svelte 5 runes for interacting with API and WebSockets
 -->
 <script>
@@ -34,15 +34,15 @@
 </script>
 
 <svelte:head>
-	<title>Pocket Server Dashboard</title>
-	<meta name="description" content="Interactive dashboard for Pocket Server API and WebSocket management" />
+	<title>Dispatch Server Dashboard</title>
+	<meta name="description" content="Interactive dashboard for Dispatch Server API and WebSocket management" />
 </svelte:head>
 
 <div class="dashboard">
 	<header class="header">
 		<div class="header-content">
 			<div class="brand">
-				<h1>🚀 Pocket Server</h1>
+				<h1>🚀 Dispatch Server</h1>
 				<p>Interactive Dashboard</p>
 			</div>
 			<div class="server-info">

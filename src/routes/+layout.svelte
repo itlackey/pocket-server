@@ -1,9 +1,9 @@
 <script>
-	// Layout component for Pocket Server
+	// Layout component for Dispatch Server
 </script>
 
 <svelte:head>
-	<title>Pocket Server</title>
+	<title>Dispatch Server</title>
 </svelte:head>
 
 <main>

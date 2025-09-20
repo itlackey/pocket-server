@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the conversion of Pocket Server from a Node.js + Hono TypeScript server to a SvelteKit application using JavaScript and JSDoc.
+This document outlines the conversion of Dispatch Server from a Node.js + Hono TypeScript server to a SvelteKit application using JavaScript and JSDoc.
 
 ## Key Changes Made
 

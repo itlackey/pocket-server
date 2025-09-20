@@ -1,6 +1,6 @@
 # Test Structure
 
-This directory contains organized tests for the Pocket Server project.
+This directory contains organized tests for the Dispatch Server project.
 
 ## Directory Structure
 

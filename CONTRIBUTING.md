@@ -1,4 +1,4 @@
-# Contributing to Pocket Server
+# Contributing to Dispatch Server
 
 Thank you for your interest in contributing!
 
@@ -30,4 +30,4 @@ Optional commands:
 ## Reporting issues
 - Use the Bug/Feature templates; include steps to reproduce and logs if relevant.
 
-Thanks for helping improve Pocket Server!
+Thanks for helping improve Dispatch Server!

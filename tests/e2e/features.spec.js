@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Advanced Feature Tests for Pocket Server SvelteKit UI
+ * Advanced Feature Tests for Dispatch Server SvelteKit UI
  * Tests specific feature interactions, data flow, and edge cases
  */
 
 test.describe('Advanced Feature Interactions', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
-		await expect(page.locator('h1')).toContainText('Pocket Server');
+		await expect(page.locator('h1')).toContainText('Dispatch Server');
 	});
 
 	test('File System operations work end-to-end', async ({ page }) => {
@@ -376,7 +376,7 @@ test.describe('Advanced Feature Interactions', () => {
 		}
 		
 		// Should still be responsive
-		await expect(page.locator('h1')).toContainText('Pocket Server');
+		await expect(page.locator('h1')).toContainText('Dispatch Server');
 		
 		// Test multiple API calls
 		await page.locator('text=API Explorer').click();

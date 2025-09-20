@@ -1,23 +1,23 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Comprehensive E2E Tests for Pocket Server SvelteKit UI
+ * Comprehensive E2E Tests for Dispatch Server SvelteKit UI
  * Tests all UI components and features across all dashboard tabs
  */
 
-test.describe('Pocket Server Dashboard E2E Tests', () => {
+test.describe('Dispatch Server Dashboard E2E Tests', () => {
 	test.beforeEach(async ({ page }) => {
 		// Navigate to the dashboard
 		await page.goto('/');
 		
 		// Wait for the page to load completely
-		await expect(page.locator('h1')).toContainText('Pocket Server');
+		await expect(page.locator('h1')).toContainText('Dispatch Server');
 		await expect(page.locator('.rocket')).toBeVisible();
 	});
 
 	test('Dashboard loads correctly with all navigation tabs', async ({ page }) => {
 		// Check main header and branding
-		await expect(page.locator('h1')).toContainText('Pocket Server');
+		await expect(page.locator('h1')).toContainText('Dispatch Server');
 		await expect(page.locator('text=SvelteKit Edition')).toBeVisible();
 		await expect(page.locator('text=Running')).toBeVisible();
 		
@@ -314,7 +314,7 @@ test.describe('Pocket Server Dashboard E2E Tests', () => {
 		await page.setViewportSize({ width: 375, height: 667 });
 		
 		// Check that the page still loads
-		await expect(page.locator('h1')).toContainText('Pocket Server');
+		await expect(page.locator('h1')).toContainText('Dispatch Server');
 		
 		// Check that navigation is still functional
 		await expect(page.locator('text=Overview')).toBeVisible();

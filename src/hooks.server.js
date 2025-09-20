@@ -1,5 +1,5 @@
 /**
- * SvelteKit hooks for Pocket Server
+ * SvelteKit hooks for Dispatch Server
  * This will handle the server initialization and WebSocket setup
  */
 

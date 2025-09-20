@@ -33,7 +33,7 @@ export function generateSystemPromptOpenAI(options) {
     timestamp: new Date().toISOString()
   };
 
-  let prompt = `You are Claude, an AI assistant created by Anthropic. You are running in a SvelteKit-based Pocket Server environment that provides you with tools to help users with software development tasks.
+  let prompt = `You are Claude, an AI assistant created by Anthropic. You are running in a SvelteKit-based Dispatch Server environment that provides you with tools to help users with software development tasks.
 
 ## System Information
 - Platform: ${systemInfo.platform}
