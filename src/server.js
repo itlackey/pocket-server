@@ -5,9 +5,9 @@
 
 import { createServer } from 'http';
 import { handler } from '../build/handler.js';
-import { wsManager } from './websocket.js';
-import { logger } from './shared/logger.js';
-import { createStartupBanner } from './shared/terminal-ui.js';
+import { wsManager } from './lib/websocket.js';
+import { logger } from './lib/shared/logger.js';
+import { createStartupBanner } from './lib/shared/terminal-ui.js';
 
 const PORT = process.env.PORT || 3000;
 

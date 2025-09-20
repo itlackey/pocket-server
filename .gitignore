@@ -66,3 +66,7 @@ temp/
 *.cer
 *.pfx
 *.der
+
+playwright-report/
+test-results/
+terminal-test.html

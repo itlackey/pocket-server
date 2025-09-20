@@ -1,9 +1,10 @@
 <!--
 	Terminal Manager Component
-	Provides terminal session management and interaction using Svelte 5 runes
+	Provides terminal session management and interaction using Svelte 5 runes with WebSocket
 -->
 <script>
 	import { onMount } from 'svelte';
+	import { wsManager } from '$lib/stores/websocket.svelte.js';
 
 	let sessions = $state([]);
 	let selectedSession = $state(null);
@@ -11,10 +12,72 @@
 	let command = $state('');
 	let isLoading = $state(false);
 	let error = $state(null);
+	let wsConnected = $state(false);
+	let currentTerminalId = $state(null);
+
 	// Derive a browser-safe default working directory
 	const defaultTerminalCwd = typeof process !== 'undefined' && process?.env?.HOME
 		? process.env.HOME
 		: '/home';
+
+	// Track WebSocket connection status
+	$effect(() => {
+		wsConnected = wsManager.connected.value;
+	});
+
+	// Track processed message IDs to avoid infinite loops
+	let processedMessageIds = new Set();
+
+	// Listen for WebSocket messages
+	$effect(() => {
+		const messages = wsManager.messages.value;
+		const latestMessage = messages[0];
+
+		if (latestMessage && latestMessage.type?.startsWith('term:') && !processedMessageIds.has(latestMessage.id)) {
+			processedMessageIds.add(latestMessage.id);
+			handleTerminalMessage(latestMessage);
+		}
+	});
+
+	/**
+	 * Handle incoming terminal WebSocket messages
+	 */
+	function handleTerminalMessage(message) {
+		const { type, payload } = message;
+
+		switch (type) {
+			case 'term:frame':
+				if (payload?.id === currentTerminalId && payload?.data) {
+					terminalOutput += payload.data;
+				}
+				break;
+			case 'term:opened':
+				if (payload?.id) {
+					currentTerminalId = payload.id;
+					terminalOutput = `Terminal session ${payload.id} opened\n`;
+					// Add session to local list instead of reloading from API
+					const newSession = {
+						id: payload.id,
+						title: payload.id,
+						cwd: payload.cwd || '/home',
+						cols: payload.cols || 80,
+						rows: payload.rows || 24,
+						active: true
+					};
+					sessions = [...sessions, newSession];
+				}
+				break;
+			case 'term:attached':
+				if (payload?.id) {
+					currentTerminalId = payload.id;
+					terminalOutput = `Attached to terminal session ${payload.id}\n`;
+				}
+				break;
+			case 'term:resized':
+				console.log('Terminal resized:', payload);
+				break;
+		}
+	}
 
 	/**
 	 * Load terminal sessions from API
@@ -38,28 +101,36 @@
 	}
 
 	/**
-	 * Create a new terminal session
+	 * Create a new terminal session via WebSocket
 	 */
 	async function createSession() {
+		if (!wsConnected) {
+			error = 'WebSocket not connected. Please connect first.';
+			return;
+		}
+
 		isLoading = true;
 		error = null;
+
 		try {
-			const response = await fetch('/api/terminal/create', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
+			const sessionId = crypto.randomUUID();
+			const sent = wsManager.send({
+				type: 'term:open',
+				sessionId: sessionId,
+				payload: {
+					id: sessionId,
 					cwd: defaultTerminalCwd,
 					cols: 80,
 					rows: 24
-				})
+				}
 			});
-			
-			if (response.ok) {
-				const data = await response.json();
-				await loadSessions();
-				selectedSession = data.id;
+
+			if (sent) {
+				selectedSession = sessionId;
+				currentTerminalId = sessionId;
+				// Session will be added to list when we get term:opened response
 			} else {
-				error = `Failed to create session: ${response.status}`;
+				error = 'Failed to send terminal creation message';
 			}
 		} catch (e) {
 			error = `Error creating session: ${e.message}`;
@@ -69,42 +140,77 @@
 	}
 
 	/**
-	 * Execute command in selected terminal
+	 * Execute command in selected terminal via WebSocket
 	 */
 	async function executeCommand() {
-		if (!selectedSession || !command.trim()) return;
-		
-		isLoading = true;
-		try {
-			const response = await fetch('/api/terminal/execute', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					sessionId: selectedSession,
-					command: command.trim()
-				})
+		console.log('executeCommand called', { selectedSession, command, wsConnected });
+
+		if (!selectedSession || !command.trim() || !wsConnected) {
+			console.log('executeCommand conditions not met', {
+				hasSession: !!selectedSession,
+				hasCommand: !!command.trim(),
+				wsConnected
 			});
-			
-			if (response.ok) {
-				const data = await response.json();
-				terminalOutput += `$ ${command}\n${data.output || ''}\n`;
+			return;
+		}
+
+		try {
+			// Add the command to output immediately to show user input
+			terminalOutput += `$ ${command}\n`;
+
+			// Send the command to the terminal via WebSocket
+			console.log('Sending WebSocket message', {
+				type: 'term:input',
+				sessionId: selectedSession,
+				payload: {
+					id: currentTerminalId || selectedSession,
+					data: command.trim() + '\n',
+					seq: Date.now()
+				}
+			});
+
+			const sent = wsManager.send({
+				type: 'term:input',
+				sessionId: selectedSession,
+				payload: {
+					id: currentTerminalId || selectedSession,
+					data: command.trim() + '\n',
+					seq: Date.now()
+				}
+			});
+
+			if (sent) {
 				command = '';
+				console.log('Command sent successfully');
 			} else {
-				error = `Command failed: ${response.status}`;
+				error = 'Failed to send command to terminal';
+				console.error('Failed to send command');
 			}
 		} catch (e) {
 			error = `Error executing command: ${e.message}`;
-		} finally {
-			isLoading = false;
+			console.error('Execute command error:', e);
 		}
 	}
 
 	/**
-	 * Select a terminal session
+	 * Select a terminal session and attach to it via WebSocket
 	 */
 	function selectSession(sessionId) {
 		selectedSession = sessionId;
-		terminalOutput = `Connected to session: ${sessionId}\n`;
+		currentTerminalId = sessionId;
+		terminalOutput = ''; // Clear output before attaching
+
+		if (wsConnected) {
+			wsManager.send({
+				type: 'term:attach',
+				sessionId: sessionId,
+				payload: {
+					id: sessionId
+				}
+			});
+		} else {
+			terminalOutput = `Session ${sessionId} selected (WebSocket not connected)\n`;
+		}
 	}
 
 	/**
@@ -132,24 +238,52 @@
 		}
 	}
 
+	/**
+	 * Connect to WebSocket if needed
+	 */
+	function connectWebSocket() {
+		console.log('connectWebSocket called', { wsConnected });
+		if (!wsConnected) {
+			console.log('Attempting to connect to WebSocket');
+			wsManager.connect('ws://localhost:3000/ws');
+		} else {
+			console.log('WebSocket already connected');
+		}
+	}
+
 	onMount(() => {
 		loadSessions();
+		connectWebSocket();
 	});
 </script>
 
 <div class="terminal-manager">
 	<div class="terminal-header">
 		<h2>🖥️ Terminal Manager</h2>
+		<div class="terminal-status">
+			<span class="websocket-status" class:connected={wsConnected}>
+				{wsConnected ? '🟢 WebSocket Connected' : '🔴 WebSocket Disconnected'}
+			</span>
+		</div>
 		<div class="terminal-actions">
-			<button 
-				class="btn btn-primary" 
+			{#if !wsConnected}
+				<button
+					class="btn btn-warning"
+					onclick={connectWebSocket}
+					disabled={isLoading}
+				>
+					🔌 Connect WebSocket
+				</button>
+			{/if}
+			<button
+				class="btn btn-primary"
 				onclick={createSession}
-				disabled={isLoading}
+				disabled={isLoading || !wsConnected}
 			>
 				➕ New Session
 			</button>
-			<button 
-				class="btn btn-secondary" 
+			<button
+				class="btn btn-secondary"
 				onclick={loadSessions}
 				disabled={isLoading}
 			>
@@ -217,18 +351,18 @@
 					<div class="terminal-input">
 						<div class="input-group">
 							<span class="input-prompt">$</span>
-							<input 
-								type="text" 
+							<input
+								type="text"
 								bind:value={command}
 								onkeydown={handleKeydown}
-								placeholder="Enter command (Ctrl+Enter to execute)"
-								disabled={isLoading}
+								placeholder={wsConnected ? "Enter command (Ctrl+Enter to execute)" : "WebSocket not connected"}
+								disabled={isLoading || !wsConnected}
 								class="command-input"
 							/>
-							<button 
+							<button
 								class="btn btn-primary"
 								onclick={executeCommand}
-								disabled={isLoading || !command.trim()}
+								disabled={isLoading || !command.trim() || !wsConnected}
 							>
 								Execute
 							</button>
@@ -263,6 +397,8 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		flex-wrap: wrap;
+		gap: 1rem;
 	}
 
 	.terminal-header h2 {
@@ -307,6 +443,32 @@
 
 	.btn-secondary:hover:not(:disabled) {
 		background: #4a5568;
+	}
+
+	.btn-warning {
+		background: #ed8936;
+		color: white;
+	}
+
+	.btn-warning:hover:not(:disabled) {
+		background: #dd6b20;
+	}
+
+	.terminal-status {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.websocket-status {
+		font-size: 0.875rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.websocket-status.connected {
+		background: rgba(72, 187, 120, 0.2);
 	}
 
 	.error-banner {

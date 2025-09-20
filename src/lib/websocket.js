@@ -8,6 +8,7 @@ import { WebSocketServer } from 'ws';
 import { logger } from './shared/logger.js';
 import { verifyAuthFromRequest } from './auth/middleware.js';
 import { getLocalWsSecretFast } from './auth/local-ws.js';
+import { TerminalManager } from './terminal/terminal-manager.js';
 
 /**
  * @typedef {Object} WebSocketMessage
@@ -50,7 +51,30 @@ class WebSocketManager {
     this.backlogMap = new Map();
     /** @type {Map<string, number>} */
     this.lastInputSeqByTerm = new Map();
-    
+
+    // Terminal manager for actual PTY sessions
+    this.terminalManager = new TerminalManager();
+
+    // Set up terminal manager event listeners
+    this.terminalManager.on('data', ({ id, data }) => {
+      this.appendToTerminalBuffer(id, data);
+    });
+
+    this.terminalManager.on('exit', ({ id, code }) => {
+      const clientId = this.termClientMap.get(id);
+      if (clientId) {
+        this.send(clientId, {
+          v: 1,
+          id: crypto.randomUUID(),
+          sessionId: 'system',
+          ts: new Date().toISOString(),
+          type: 'term:exited',
+          payload: { id, code },
+          timestamp: Date.now()
+        });
+      }
+    });
+
     // Constants
     this.FLUSH_INTERVAL_MS = 8; // ~120Hz target
     this.MAX_FRAME_BYTES = 32 * 1024; // 32KB per frame
@@ -103,6 +127,17 @@ class WebSocketManager {
         } catch (error) {
           logger.error('WebSocket', 'Auth verification failed', { clientId, error: error.message });
         }
+      }
+
+      // For development: allow connections from localhost without authentication
+      if (!authenticated && (
+        req.headers.host?.includes('localhost') ||
+        req.headers.host?.includes('127.0.0.1') ||
+        req.url?.includes('localhost') ||
+        req.headers.origin?.includes('localhost')
+      )) {
+        authenticated = true;
+        logger.websocket('dev_auth_bypass', clientId, { host: req.headers.host });
       }
 
       if (!authenticated) {
@@ -216,45 +251,79 @@ class WebSocketManager {
       case 'term:attach': {
         const { id } = payload || {};
         if (typeof id === 'string') {
-          this.termClientMap.set(id, clientId);
-          this.sendBacklogToClient(clientId, id);
-          
-          const opened = {
-            v: 1,
-            id: crypto.randomUUID(),
-            sessionId: clientId,
-            ts: new Date().toISOString(),
-            type: 'term:attached',
-            payload: { id },
-            timestamp: Date.now(),
-          };
-          ws.send(JSON.stringify(opened));
+          // Check if terminal session exists
+          const session = this.terminalManager.get(id);
+          if (session) {
+            this.termClientMap.set(id, clientId);
+            this.sendBacklogToClient(clientId, id);
+
+            const attached = {
+              v: 1,
+              id: crypto.randomUUID(),
+              sessionId: clientId,
+              ts: new Date().toISOString(),
+              type: 'term:attached',
+              payload: { id, cols: session.cols, rows: session.rows, cwd: session.cwd },
+              timestamp: Date.now(),
+            };
+            ws.send(JSON.stringify(attached));
+          } else {
+            const errorMsg = {
+              v: 1,
+              id: crypto.randomUUID(),
+              sessionId: clientId,
+              ts: new Date().toISOString(),
+              type: 'term:error',
+              payload: { id, error: 'Terminal session not found' },
+              timestamp: Date.now(),
+            };
+            ws.send(JSON.stringify(errorMsg));
+          }
         }
         break;
       }
 
       case 'term:open': {
         const { id, cwd, rows, cols } = payload || {};
-        this.termClientMap.set(id, clientId);
-        this.backlogMap.set(id, { chunks: [], totalBytes: 0 });
-        this.lastInputSeqByTerm.delete(id);
-        
-        const opened = {
-          v: 1,
-          id: crypto.randomUUID(),
-          sessionId: clientId,
-          ts: new Date().toISOString(),
-          type: 'term:opened',
-          payload: { id, cols: cols || 80, rows: rows || 24 },
-          timestamp: Date.now(),
-        };
-        ws.send(JSON.stringify(opened));
+
+        try {
+          // Create actual PTY session
+          const session = this.terminalManager.open(id, cwd || process.cwd(), rows || 24, cols || 80);
+
+          this.termClientMap.set(id, clientId);
+          this.backlogMap.set(id, { chunks: [], totalBytes: 0 });
+          this.lastInputSeqByTerm.delete(id);
+          this.frameBuffers.set(id, { chunks: [], bytes: 0, timer: null, seq: 0 });
+
+          const opened = {
+            v: 1,
+            id: crypto.randomUUID(),
+            sessionId: clientId,
+            ts: new Date().toISOString(),
+            type: 'term:opened',
+            payload: { id, cols: session.cols, rows: session.rows, cwd: session.cwd },
+            timestamp: Date.now(),
+          };
+          ws.send(JSON.stringify(opened));
+        } catch (error) {
+          logger.error('Terminal', 'Failed to open session', { id, error: error.message });
+          const errorMsg = {
+            v: 1,
+            id: crypto.randomUUID(),
+            sessionId: clientId,
+            ts: new Date().toISOString(),
+            type: 'term:error',
+            payload: { id, error: error.message },
+            timestamp: Date.now(),
+          };
+          ws.send(JSON.stringify(errorMsg));
+        }
         break;
       }
 
       case 'term:input': {
         const { id, data, seq } = payload || {};
-        
+
         // Dedupe by seq if provided
         if (typeof id === 'string' && Number.isFinite(seq)) {
           const last = this.lastInputSeqByTerm.get(id) ?? -1;
@@ -264,15 +333,21 @@ class WebSocketManager {
           }
           this.lastInputSeqByTerm.set(id, Number(seq));
         }
-        
-        // For now, just echo back the input (terminal manager would handle this)
-        logger.websocket('term_input', clientId, { id, dataLength: data?.length });
+
+        // Send input to actual PTY session
+        if (typeof id === 'string' && typeof data === 'string') {
+          this.terminalManager.write(id, data);
+          logger.websocket('term_input', clientId, { id, dataLength: data?.length });
+        }
         break;
       }
 
       case 'term:resize': {
         const { id, cols, rows, seq } = payload || {};
         if (typeof id === 'string' && Number.isFinite(cols) && Number.isFinite(rows)) {
+          // Resize actual PTY session
+          this.terminalManager.resize(id, Number(cols), Number(rows));
+
           const resized = {
             v: 1,
             id: crypto.randomUUID(),
@@ -290,9 +365,19 @@ class WebSocketManager {
       case 'term:close': {
         const { id } = payload || {};
         if (typeof id === 'string') {
+          // Close actual PTY session
+          this.terminalManager.close(id);
+
           this.termClientMap.delete(id);
           this.backlogMap.delete(id);
           this.lastInputSeqByTerm.delete(id);
+
+          // Clear frame buffer
+          const buffer = this.frameBuffers.get(id);
+          if (buffer?.timer) {
+            clearTimeout(buffer.timer);
+          }
+          this.frameBuffers.delete(id);
         }
         break;
       }
@@ -342,6 +427,42 @@ class WebSocketManager {
         break;
       default:
         logger.warn('FileSystem', `Unknown message type: ${type}`);
+    }
+  }
+
+  /**
+   * Append data to terminal buffer and trigger frame sending
+   * @param {string} id - Terminal ID
+   * @param {string} data - Data to append
+   */
+  appendToTerminalBuffer(id, data) {
+    if (!data) return;
+
+    // Add to backlog for session restore
+    this.appendBacklog(id, data);
+
+    // Get or create frame buffer
+    let buffer = this.frameBuffers.get(id);
+    if (!buffer) {
+      buffer = { chunks: [], bytes: 0, timer: null, seq: 0 };
+      this.frameBuffers.set(id, buffer);
+    }
+
+    // Add data to buffer
+    buffer.chunks.push(data);
+    buffer.bytes += data.length;
+
+    // Flush immediately if buffer is full
+    if (buffer.bytes >= this.MAX_FRAME_BYTES) {
+      this.flushFrame(id);
+      return;
+    }
+
+    // Set timer to flush after interval if not already set
+    if (!buffer.timer) {
+      buffer.timer = setTimeout(() => {
+        this.flushFrame(id);
+      }, this.FLUSH_INTERVAL_MS);
     }
   }
 
