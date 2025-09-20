@@ -5,14 +5,22 @@
 <script>
 	import { onMount } from 'svelte';
 
+	// Props
+	/** @type {string} */
+	export let apiKey = '';
+
 	let sessions = $state([]);
 	let selectedSession = $state(null);
 	let sessionSnapshot = $state(null);
 	let message = $state('');
+	let conversation = $state([]);
 	let isLoading = $state(false);
 	let error = $state(null);
 	let isAutoRefresh = $state(false);
 	let refreshInterval = $state(null);
+	let isSending = $state(false);
+	let workingDir = $state(process?.cwd?.() || '/home');
+	let maxMode = $state(false);
 
 	/**
 	 * Load agent sessions from API
@@ -46,8 +54,9 @@
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					workingDir: process.env.HOME || '/home',
-					maxMode: false
+					workingDir,
+					maxMode,
+					title: 'New Chat'
 				})
 			});
 			
@@ -55,6 +64,7 @@
 				const data = await response.json();
 				await loadSessions();
 				selectedSession = data.id;
+				await loadSessionSnapshot(data.id);
 			} else {
 				error = `Failed to create session: ${response.status}`;
 			}
@@ -62,6 +72,76 @@
 			error = `Error creating session: ${e.message}`;
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	/**
+	 * Send message to agent
+	 */
+	async function sendMessage() {
+		if (!selectedSession || !message.trim() || !apiKey.trim()) {
+			if (!apiKey.trim()) {
+				error = 'Please enter your Anthropic API key';
+			}
+			return;
+		}
+		
+		isSending = true;
+		error = null;
+		const userMessage = message.trim();
+		message = ''; // Clear input
+		
+		// Add user message to conversation
+		conversation = [...conversation, {
+			role: 'user',
+			content: userMessage,
+			timestamp: new Date().toISOString()
+		}];
+		
+		try {
+			const response = await fetch('/api/agent/chat', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					sessionId: selectedSession,
+					content: userMessage,
+					workingDir,
+					maxMode,
+					apiKey
+				})
+			});
+			
+			if (response.ok) {
+				const data = await response.json();
+				
+				// Process streaming messages
+				for (const msg of data.messages || []) {
+					if (msg.type === 'agent:assistant') {
+						// Add or update assistant response
+						const lastMsg = conversation[conversation.length - 1];
+						if (lastMsg && lastMsg.role === 'assistant' && !lastMsg.isComplete) {
+							lastMsg.content += msg.content;
+							lastMsg.isComplete = msg.isComplete;
+						} else {
+							conversation = [...conversation, {
+								role: 'assistant',
+								content: msg.content,
+								timestamp: new Date().toISOString(),
+								isComplete: msg.isComplete
+							}];
+						}
+					} else if (msg.type === 'agent:title') {
+						// Update session title
+						await loadSessions();
+					}
+				}
+			} else {
+				error = `Failed to send message: ${response.status}`;
+			}
+		} catch (e) {
+			error = `Error sending message: ${e.message}`;
+		} finally {
+			isSending = false;
 		}
 	}
 
@@ -76,13 +156,31 @@
 			if (response.ok) {
 				const data = await response.json();
 				sessionSnapshot = data;
+				// Load conversation from snapshot
+				if (data.conversation && data.conversation.messages) {
+					conversation = data.conversation.messages.map(msg => ({
+						...msg,
+						timestamp: new Date().toISOString(),
+						isComplete: true
+					}));
+				}
 			} else {
 				sessionSnapshot = null;
+				conversation = [];
 			}
 		} catch (e) {
 			console.error('Error loading session snapshot:', e);
 			sessionSnapshot = null;
+			conversation = [];
 		}
+	}
+
+	/**
+	 * Select session and load its data
+	 */
+	async function selectSession(sessionId) {
+		selectedSession = sessionId;
+		await loadSessionSnapshot(sessionId);
 	}
 
 	/**

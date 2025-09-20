@@ -12,6 +12,11 @@
 	import AgentManager from '$lib/components/AgentManager.svelte';
 
 	let activeTab = $state('overview');
+	
+	// Environment variable for Anthropic API key (would be set in production)
+	const ANTHROPIC_API_KEY = typeof window !== 'undefined' 
+		? localStorage.getItem('anthropic_api_key') || ''
+		: '';
 
 	const tabs = [
 		{ id: 'overview', label: '📊 Overview', icon: '📊' },
@@ -82,7 +87,7 @@
 			</div>
 		{:else if activeTab === 'agent'}
 			<div class="single-panel">
-				<AgentManager />
+				<AgentManager apiKey={ANTHROPIC_API_KEY} />
 			</div>
 		{:else if activeTab === 'websocket'}
 			<div class="single-panel">

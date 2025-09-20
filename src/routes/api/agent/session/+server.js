@@ -5,6 +5,7 @@
 
 import { json } from '@sveltejs/kit';
 import { sessionStoreFs } from '$lib/agent/store/session-store-fs.js';
+import { anthropicService } from '$lib/agent/anthropic/service.js';
 
 /**
  * Create a new agent session
@@ -25,11 +26,18 @@ export async function POST({ request }) {
 			title
 		});
 		
+		// Also create session in Anthropic service for real-time functionality
+		const session = anthropicService.getOrCreateSession(id, workingDir);
+		session.maxMode = maxMode;
+		if (title) {
+			session.conversation.title = title;
+		}
+		
 		return json({ 
 			id,
 			workingDir,
 			maxMode,
-			title: title || 'New Chat',
+			title: title || session.conversation.title,
 			message: 'Session created successfully'
 		});
 	} catch (error) {
