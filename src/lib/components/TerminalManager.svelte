@@ -11,6 +11,10 @@
 	let command = $state('');
 	let isLoading = $state(false);
 	let error = $state(null);
+	// Derive a browser-safe default working directory
+	const defaultTerminalCwd = typeof process !== 'undefined' && process?.env?.HOME
+		? process.env.HOME
+		: '/home';
 
 	/**
 	 * Load terminal sessions from API
@@ -44,7 +48,7 @@
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					cwd: process.env.HOME || '/home',
+					cwd: defaultTerminalCwd,
 					cols: 80,
 					rows: 24
 				})

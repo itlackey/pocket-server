@@ -6,8 +6,7 @@
 	import { onMount } from 'svelte';
 
 	// Props
-	/** @type {string} */
-	export let apiKey = '';
+	let {apiKey} = $props();
 
 	let sessions = $state([]);
 	let selectedSession = $state(null);
@@ -19,7 +18,11 @@
 	let isAutoRefresh = $state(false);
 	let refreshInterval = $state(null);
 	let isSending = $state(false);
-	let workingDir = $state(process?.cwd?.() || '/home');
+	// Resolve default working directory without assuming Node globals exist in the browser
+	const resolvedWorkingDir = typeof process !== 'undefined' && typeof process.cwd === 'function'
+		? process.cwd()
+		: '/home';
+	let workingDir = $state(resolvedWorkingDir);
 	let maxMode = $state(false);
 
 	/**
@@ -227,24 +230,7 @@
 		}
 	}
 
-	/**
-	 * Select a session and load its snapshot
-	 */
-	async function selectSession(sessionId) {
-		selectedSession = sessionId;
-		await loadSessionSnapshot(sessionId);
-	}
-
-	/**
-	 * Send message to agent (placeholder for future WebSocket integration)
-	 */
-	function sendMessage() {
-		if (!message.trim() || !selectedSession) return;
-		
-		// This would integrate with WebSocket for real-time agent communication
-		console.log('Sending message to agent:', { sessionId: selectedSession, message });
-		message = '';
-	}
+	
 
 	/**
 	 * Toggle auto-refresh

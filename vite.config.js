@@ -1,6 +1,7 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import { WebSocketServer } from 'ws';
+import { randomUUID } from 'node:crypto';
 
 // Custom plugin to add WebSocket support in dev mode
 function webSocketPlugin() {
@@ -8,26 +9,43 @@ function webSocketPlugin() {
 		name: 'websocket',
 		configureServer(server) {
 			if (!server.httpServer) return;
-			
-			const wss = new WebSocketServer({ 
-				server: server.httpServer,
-				path: '/ws'
-			});
 
-			wss.on('connection', (ws, req) => {
-				const clientId = crypto.randomUUID();
+			const wss = new WebSocketServer({ noServer: true });
+
+			const upgradeHandler = (request, socket, head) => {
+				if (!request.url) return;
+
+				const { pathname } = new URL(request.url, 'http://localhost');
+				if (pathname !== '/ws') return; // let Vite handle its own upgrade paths
+
+				wss.handleUpgrade(request, socket, head, (ws) => {
+					wss.emit('connection', ws, request);
+				});
+			};
+
+			server.httpServer.on('upgrade', upgradeHandler);
+
+			const closeHandler = () => {
+				server.httpServer?.off('upgrade', upgradeHandler);
+				wss.clients.forEach((client) => client.close());
+				wss.close();
+			};
+
+			server.httpServer.once('close', closeHandler);
+
+			wss.on('connection', (ws) => {
+				const clientId = randomUUID();
 				console.log(`WebSocket client connected: ${clientId}`);
 
 				ws.on('message', (data) => {
 					try {
 						const message = JSON.parse(data.toString());
 						console.log('WebSocket message:', message.type);
-						
-						// Handle ping/pong
+
 						if (message.type === 'ping') {
 							ws.send(JSON.stringify({
 								v: 1,
-								id: crypto.randomUUID(),
+								id: randomUUID(),
 								sessionId: message.sessionId || 'system',
 								ts: new Date().toISOString(),
 								type: 'pong',
@@ -45,10 +63,9 @@ function webSocketPlugin() {
 					console.log(`WebSocket client disconnected: ${clientId}`);
 				});
 
-				// Send welcome message
 				ws.send(JSON.stringify({
 					v: 1,
-					id: crypto.randomUUID(),
+					id: randomUUID(),
 					sessionId: 'system',
 					ts: new Date().toISOString(),
 					type: 'ws:connected',

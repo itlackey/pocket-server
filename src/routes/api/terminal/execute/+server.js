@@ -1,7 +1,4 @@
-import { TerminalManager } from '$lib/terminal/terminal-manager.js';
-
-// Create singleton instance
-const terminalManager = new TerminalManager();
+import { terminalManager } from '$lib/terminal/state.js';
 
 /**
  * @type {import('./$types').RequestHandler}
