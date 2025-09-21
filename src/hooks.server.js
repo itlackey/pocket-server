@@ -6,7 +6,6 @@
 import { sequence } from '@sveltejs/kit/hooks';
 import { wsManager } from '$lib/websocket.js';
 import { getOrCreateLocalWsSecret } from '$lib/auth/local-ws.js';
-import { createServer } from 'http';
 
 // Initialize local WebSocket secret on startup
 try { 

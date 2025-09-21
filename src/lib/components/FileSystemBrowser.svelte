@@ -128,14 +128,18 @@
 					<h4>Search Results ({searchResults.length})</h4>
 					<div class="file-list">
 						{#each searchResults as result}
-							<div class="file-item" onclick={() => result.type === 'file' ? openFile(result.path) : navigateToPath(result.path)}>
+							<button
+								type="button"
+								class="file-item"
+								onclick={() => result.type === 'file' ? openFile(result.path) : navigateToPath(result.path)}
+							>
 								<span class="file-icon">{result.type === 'directory' ? '📁' : '📄'}</span>
 								<div class="file-info">
 									<span class="file-name">{result.name}</span>
 									<span class="file-path">{result.path}</span>
 								</div>
 								<span class="file-score">Score: {result.score}</span>
-							</div>
+							</button>
 						{/each}
 					</div>
 				</div>
@@ -164,7 +168,11 @@
 
 				<div class="file-list">
 					{#each directoryListing.nodes as node}
-						<div class="file-item" onclick={() => node.type === 'file' ? openFile(node.path) : navigateToPath(node.path)}>
+						<button
+							type="button"
+							class="file-item"
+							onclick={() => node.type === 'file' ? openFile(node.path) : navigateToPath(node.path)}
+						>
 							<span class="file-icon">{getFileIcon(node)}</span>
 							<div class="file-info">
 								<span class="file-name">{node.name}</span>
@@ -176,7 +184,7 @@
 									{/if}
 								</div>
 							</div>
-						</div>
+						</button>
 					{/each}
 				</div>
 			{/if}
@@ -362,9 +370,14 @@
 		align-items: center;
 		gap: 0.75rem;
 		padding: 0.75rem;
+		border: none;
 		border-bottom: 1px solid #f0f0f0;
 		cursor: pointer;
 		transition: background 0.2s;
+		width: 100%;
+		text-align: left;
+		background: transparent;
+		color: inherit;
 	}
 
 	.file-item:hover {

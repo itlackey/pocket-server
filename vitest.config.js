@@ -8,7 +8,8 @@ export default defineConfig({
 		}
 	},
 	test: {
-		include: ['tests/**/*.{test,spec}.{js,ts}'],
+		include: ['tests/**/*.test.{js,ts}'],
+		exclude: ['tests/e2e/**/*.spec.{js,ts}'],
 		environment: 'node',
 		globals: true
 	}

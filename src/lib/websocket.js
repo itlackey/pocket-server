@@ -3,7 +3,6 @@
  * Provides WebSocket support using a custom handler since SvelteKit doesn't have built-in WebSocket support
  */
 
-import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { logger } from './shared/logger.js';
 import { verifyAuthFromRequest } from './auth/middleware.js';

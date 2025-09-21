@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { verifyAuthFromRequest, isLocalRequest } from '../src/lib/auth/middleware.js';
-import { getOrCreateLocalWsSecret, getLocalWsSecretFast } from '../src/lib/auth/local-ws.js';
-import { verifyAccessToken, generateAccessToken } from '../src/lib/auth/token.js';
+import { verifyAuthFromRequest, isLocalRequest } from '../../src/lib/auth/middleware.js';
+import { getOrCreateLocalWsSecret, getLocalWsSecretFast } from '../../src/lib/auth/local-ws.js';
+import { verifyAccessToken, generateAccessToken } from '../../src/lib/auth/token.js';
 
 // Mock file system operations
 vi.mock('fs', () => ({
@@ -16,13 +16,13 @@ vi.mock('fs', () => ({
 }));
 
 // Mock device registry
-vi.mock('../src/lib/auth/device-registry.js', () => ({
+vi.mock('../../src/lib/auth/device-registry.js', () => ({
   getDevice: vi.fn((deviceId) => {
     if (deviceId === 'valid-device') {
-      return { id: 'valid-device', revoked: false };
+      return { deviceId: 'valid-device', revoked: false };
     }
     if (deviceId === 'revoked-device') {
-      return { id: 'revoked-device', revoked: true };
+      return { deviceId: 'revoked-device', revoked: true };
     }
     return null;
   }),

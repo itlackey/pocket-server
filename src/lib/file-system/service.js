@@ -5,7 +5,7 @@
 
 import { mkdir, readdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { basename, dirname, extname, join, relative, resolve } from 'node:path';
+import { basename, dirname, extname, join, resolve } from 'node:path';
 
 /**
  * @typedef {import('./types.js').FileNode} FileNode

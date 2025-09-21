@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { wsManager } from '../src/lib/websocket.js';
-import { TerminalManager } from '../src/lib/terminal/terminal-manager.js';
-import { TerminalRegistry } from '../src/lib/terminal/registry.js';
+import { wsManager } from '../../src/lib/websocket.js';
+import { TerminalManager } from '../../src/lib/terminal/terminal-manager.js';
+import { TerminalRegistry } from '../../src/lib/terminal/registry.js';
 
 // Mock node-pty to avoid requiring actual PTY in tests
 vi.mock('node-pty', () => ({

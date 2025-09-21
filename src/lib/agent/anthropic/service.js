@@ -11,6 +11,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { generateSystemPrompt } from './prompt.js';
 import { processStream } from './streaming.js';
 import { logger } from '$lib/shared/logger.js';
+import { toolRegistry } from '../tools/registry.js';
 import { bashToolDefinition, executeBash } from './tools/bash.js';
 import { editorToolDefinition, executeEditor } from './tools/editor.js';
 import { webSearchToolDefinition, executeWebSearch } from './tools/web-search.js';
@@ -321,11 +322,22 @@ export class AnthropicService {
           session.streamingState = state;
           session.lastActivity = new Date();
           session.phase = state.isStreaming ? 'streaming' : (state.error ? 'error' : 'ready');
-        }
+        },
+        undefined, // shouldAbort
+        session.currentStreamController.signal // abortSignal
       );
 
       // Update session
       session.streamingState = streamingState;
+
+      // Add assistant response to conversation if streaming completed successfully
+      if (streamingState && streamingState.finalMessage) {
+        session.conversation.messages.push({
+          role: 'assistant',
+          content: streamingState.finalMessage.content || []
+        });
+        session.conversation.updatedAt = new Date();
+      }
 
       // Session updated by processStream callbacks
       session.lastActivity = new Date();
@@ -358,21 +370,32 @@ export class AnthropicService {
    * @param {ProjectContext} [projectContext] - Project context
    * @returns {string} System prompt
    */
-  generateSystemPrompt(params) {
+  generateSystemPrompt(params, projectContext) {
+    // Handle both string and object parameters for backward compatibility
+    if (typeof params === 'string') {
+      params = { 
+        workingDirectory: params, 
+        projectContext: projectContext ? {
+          sourcePath: projectContext.path || projectContext.sourcePath,
+          content: projectContext.content
+        } : undefined
+      };
+    }
+    
     // Use the imported prompt generator with fallback to simple prompt
     try {
       return generateSystemPrompt(params);
     } catch (e) {
       // Fallback to simple prompt if the imported function fails
       const workingDir = params.workingDirectory || params.workingDir;
-      const projectContext = params.projectContext;
+      const projectCtx = params.projectContext;
 
       let prompt = `You are Claude, an AI assistant created by Anthropic. You are helpful, harmless, and honest.
 
 Current working directory: ${workingDir}`;
 
-      if (projectContext) {
-        prompt += `\n\nProject context from ${projectContext.sourcePath || projectContext.path}:\n${projectContext.content.slice(0, 2000)}`;
+      if (projectCtx) {
+        prompt += `\n\nProject context from ${projectCtx.sourcePath || projectCtx.path}:\n${projectCtx.content.slice(0, 2000)}`;
       }
 
       return prompt;
@@ -646,6 +669,16 @@ Current working directory: ${workingDir}`;
         this.clearSession(sessionId);
       }
     }
+  }
+
+  /**
+   * Generate conversation title
+   * @param {string} userMessage - First user message
+   * @param {string} [apiKey] - Anthropic API key
+   * @returns {Promise<string>} Generated title
+   */
+  async generateConversationTitle(userMessage, apiKey) {
+    return await generateConversationTitle(userMessage, apiKey);
   }
 
   /**

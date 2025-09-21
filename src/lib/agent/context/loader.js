@@ -8,7 +8,6 @@
  * @fileoverview Project context loading with import resolution
  */
 
-import os from 'node:os';
 import { promises as fs } from 'fs';
 import { dirname, join, resolve, sep } from 'path';
 import { MAX_CONTEXT_BYTES, MAX_IMPORT_DEPTH } from './config.js';

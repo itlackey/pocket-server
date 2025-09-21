@@ -140,8 +140,8 @@
 		<h4>Request Builder</h4>
 		
 		<div class="endpoint-selector">
-			<label>Endpoint:</label>
-			<select bind:value={selectedEndpoint} onchange={() => selectEndpoint(selectedEndpoint)}>
+			<label for="endpoint-select">Endpoint:</label>
+			<select id="endpoint-select" bind:value={selectedEndpoint} onchange={() => selectEndpoint(selectedEndpoint)}>
 				{#each endpoints as endpoint}
 					<option value={endpoint.path}>
 						{endpoint.method} {endpoint.path} - {endpoint.description}
@@ -152,8 +152,9 @@
 
 		{#if selectedEndpoint === 'custom'}
 			<div class="custom-path">
-				<label>Custom Path:</label>
+				<label for="custom-path">Custom Path:</label>
 				<input 
+					id="custom-path"
 					bind:value={customPath}
 					placeholder="/api/custom/endpoint"
 					class="path-input"
@@ -163,8 +164,9 @@
 
 		{#if selectedEndpoint === '/fs/list'}
 			<div class="path-parameter">
-				<label>Directory Path:</label>
+				<label for="directory-path">Directory Path:</label>
 				<input 
+					id="directory-path"
 					bind:value={currentPath}
 					placeholder="Leave empty for default or enter path like /home/user"
 					class="path-input"
@@ -173,7 +175,7 @@
 		{/if}
 
 		<div class="method-display">
-			<label>Method:</label>
+			<span class="field-label">Method:</span>
 			<span class="method-badge method-{currentEndpoint().method.toLowerCase()}">
 				{currentEndpoint().method}
 			</span>
@@ -184,8 +186,9 @@
 
 		{#if currentEndpoint().method === 'POST'}
 			<div class="request-body">
-				<label>Request Body (JSON):</label>
+				<label for="request-body">Request Body (JSON):</label>
 				<textarea 
+					id="request-body"
 					bind:value={requestBody}
 					placeholder="Enter JSON request body"
 					rows="4"
@@ -256,7 +259,11 @@
 			
 			<div class="history-list">
 				{#each requestHistory as request, i (i)}
-					<div class="history-item" onclick={() => lastResponse = request}>
+					<button
+						type="button"
+						class="history-item"
+						onclick={() => lastResponse = request}
+					>
 						<div class="history-meta">
 							<span class="status" style="color: {getStatusColor(request.status)}">
 								{request.status.toUpperCase()}
@@ -270,7 +277,7 @@
 							{/if}
 							<span class="timestamp">{formatTimestamp(request.timestamp)}</span>
 						</div>
-					</div>
+					</button>
 				{/each}
 			</div>
 		</div>
@@ -327,9 +334,18 @@
 		margin-bottom: 1rem;
 	}
 
-	.endpoint-selector label, .custom-path label, .path-parameter label, .method-display label, .request-body label {
+	.endpoint-selector label,
+	.custom-path label,
+	.path-parameter label,
+	.request-body label {
 		display: block;
 		margin-bottom: 0.25rem;
+		font-weight: 600;
+		color: #666;
+		font-size: 0.9rem;
+	}
+
+	.method-display .field-label {
 		font-weight: 600;
 		color: #666;
 		font-size: 0.9rem;
@@ -570,10 +586,15 @@
 	}
 
 	.history-item {
+		display: block;
 		padding: 0.5rem 1rem;
+		border: none;
 		border-bottom: 1px solid #f0f0f0;
 		cursor: pointer;
 		transition: background 0.2s;
+		background: transparent;
+		width: 100%;
+		text-align: left;
 	}
 
 	.history-item:hover {

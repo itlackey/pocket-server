@@ -93,17 +93,17 @@
 	{#if healthData}
 		<div class="metrics">
 			<div class="metric">
-				<label>Status</label>
+				<span class="metric-label">Status</span>
 				<span class="value status-{healthData.status}">{healthData.status.toUpperCase()}</span>
 			</div>
 
 			<div class="metric">
-				<label>Uptime</label>
+				<span class="metric-label">Uptime</span>
 				<span class="value">{formattedUptime()}</span>
 			</div>
 
 			<div class="metric">
-				<label>Memory Usage</label>
+				<span class="metric-label">Memory Usage</span>
 				<div class="memory-info">
 					<span class="value">{formattedMemory().used} / {formattedMemory().total}</span>
 					<div class="memory-bar">
@@ -114,7 +114,7 @@
 			</div>
 
 			<div class="metric">
-				<label>Last Updated</label>
+				<span class="metric-label">Last Updated</span>
 				<span class="value timestamp">{new Date(healthData.timestamp).toLocaleTimeString()}</span>
 			</div>
 		</div>
@@ -211,7 +211,7 @@
 		gap: 0.25rem;
 	}
 
-	.metric label {
+	.metric .metric-label {
 		font-weight: 600;
 		color: #666;
 		font-size: 0.9rem;

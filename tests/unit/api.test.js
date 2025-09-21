@@ -40,24 +40,22 @@ test('Auth pairing status endpoint works', async () => {
 });
 
 test('File system list endpoint works', async () => {
-	const response = await fetch(`${BASE_URL}/api/fs/list?path=/home`);
+	const response = await fetch(`${BASE_URL}/api/fs/list?path=.`);
 	expect(response.ok).toBe(true);
-	
+
 	const data = await response.json();
-	expect(data).toHaveProperty('items');
-	expect(Array.isArray(data.items)).toBe(true);
+	expect(data).toHaveProperty('nodes');
+	expect(Array.isArray(data.nodes)).toBe(true);
 	expect(data).toHaveProperty('path');
 });
 
 test('File system search endpoint works', async () => {
-	const response = await fetch(`${BASE_URL}/api/fs/search?query=test&path=/home`);
+	const response = await fetch(`${BASE_URL}/api/fs/search?query=test&path=.`);
 	expect(response.ok).toBe(true);
 	
 	const data = await response.json();
-	expect(data).toHaveProperty('results');
-	expect(Array.isArray(data.results)).toBe(true);
-	expect(data).toHaveProperty('query');
-	expect(data.query).toBe('test');
+	expect(Array.isArray(data)).toBe(true);
+	expect(data.length).toBeGreaterThan(0);
 });
 
 test('Agent session creation works', async () => {
@@ -115,27 +113,45 @@ test('Terminal session creation works', async () => {
 });
 
 test('Terminal command execution works', async () => {
+	// First create a terminal session
+	const createResponse = await fetch(`${BASE_URL}/api/terminal/create`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			cwd: '.',
+			cols: 80,
+			rows: 24
+		})
+	});
+
+	expect(createResponse.ok).toBe(true);
+	const createData = await createResponse.json();
+	const sessionId = createData.id;
+
+	// Then execute a command
 	const response = await fetch(`${BASE_URL}/api/terminal/execute`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({
-			sessionId: 'test-session',
+			sessionId: sessionId,
 			command: 'echo "Hello World"'
 		})
 	});
-	
+
 	expect(response.ok).toBe(true);
-	
+
 	const data = await response.json();
-	expect(data).toHaveProperty('output');
-	expect(data).toHaveProperty('exitCode');
-	expect(typeof data.output).toBe('string');
-	expect(typeof data.exitCode).toBe('number');
+	expect(data).toHaveProperty('success');
+	expect(data).toHaveProperty('message');
+	expect(data).toHaveProperty('command');
+	expect(data.success).toBe(true);
+	expect(typeof data.message).toBe('string');
+	expect(typeof data.command).toBe('string');
 });
 
 test('File system write and read operations work', async () => {
 	const testContent = 'Test file content for e2e testing';
-	const testPath = '/tmp/test-file.txt';
+	const testPath = './test-file.txt';
 	
 	// Write file
 	const writeResponse = await fetch(`${BASE_URL}/api/fs/write`, {

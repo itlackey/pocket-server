@@ -149,7 +149,7 @@
 			{#if deviceStatus !== null}
 				<div class="status-display">
 					<div class="status-item">
-						<label>Status:</label>
+						<span class="status-label">Status:</span>
 						<span 
 							class="status-value" 
 							style="color: {deviceStatusDisplay().color}"
@@ -158,7 +158,7 @@
 						</span>
 					</div>
 					<div class="status-item">
-						<label>Device ID:</label>
+						<span class="status-label">Device ID:</span>
 						<span class="device-id">{deviceId}</span>
 					</div>
 				</div>
@@ -172,7 +172,7 @@
 			{#if pairingStatus !== null}
 				<div class="status-display">
 					<div class="status-item">
-						<label>Status:</label>
+						<span class="status-label">Status:</span>
 						<span 
 							class="status-value" 
 							style="color: {pairingStatusDisplay().color}"
@@ -183,7 +183,7 @@
 
 					{#if pairingStatus.active}
 						<div class="status-item">
-							<label>Expires At:</label>
+							<span class="status-label">Expires At:</span>
 							<span class="expires-at">
 								{new Date(pairingStatus.expiresAt).toLocaleTimeString()}
 							</span>
@@ -191,7 +191,7 @@
 
 						{#if pairingCountdown()}
 							<div class="status-item">
-								<label>Time Left:</label>
+								<span class="status-label">Time Left:</span>
 								<span class="countdown" class:urgent={pairingCountdown() < 30}>
 									{pairingCountdown()}s
 								</span>
@@ -387,10 +387,11 @@
 		align-items: center;
 	}
 
-	.status-item label {
+	.status-item .status-label {
 		font-weight: 600;
 		color: #666;
 		font-size: 0.9rem;
+		margin-right: 0.5rem;
 	}
 
 	.status-value {

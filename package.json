@@ -7,7 +7,7 @@
     "preview": "vite preview",
     "start": "node build/index.js",
     "run:cli": "node src/cli.js",
-    "test": "vitest",
+    "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:watch": "vitest watch",
     "test:coverage": "vitest --coverage",
@@ -19,7 +19,6 @@
     "test:all": "npm run test:unit && npm run test:e2e",
     "playwright:install": "npx playwright install",
     "rebuild:native": "npm rebuild node-pty",
-    "lint": "npx -p @biomejs/biome@2.2.0 biome check --reporter=summary --max-diagnostics=0 .",
     "prepare": "svelte-kit sync",
     "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch"

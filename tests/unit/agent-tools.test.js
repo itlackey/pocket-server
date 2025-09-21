@@ -3,11 +3,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { toolRegistry } from '../src/lib/agent/tools/registry.js';
-import { executeBash, isBashCommandDangerous } from '../src/lib/agent/anthropic/tools/bash.js';
-import { executeEditor } from '../src/lib/agent/anthropic/tools/editor.js';
-import { executeWebSearch } from '../src/lib/agent/anthropic/tools/web-search.js';
-import { executeWorkPlan } from '../src/lib/agent/anthropic/tools/work-plan.js';
+import { toolRegistry } from '../../src/lib/agent/tools/registry.js';
+import { executeBash, isBashCommandDangerous } from '../../src/lib/agent/anthropic/tools/bash.js';
+import { executeEditor } from '../../src/lib/agent/anthropic/tools/editor.js';
+import { executeWebSearch } from '../../src/lib/agent/anthropic/tools/web-search.js';
+import { executeWorkPlan } from '../../src/lib/agent/anthropic/tools/work-plan.js';
 
 describe('Tool Registry', () => {
   beforeEach(() => {
@@ -21,7 +21,7 @@ describe('Tool Registry', () => {
     it('should register default tools', () => {
       expect(toolRegistry.get('bash')).toBeDefined();
       expect(toolRegistry.get('str_replace_based_edit_tool')).toBeDefined();
-      expect(toolRegistry.get('brave_search')).toBeDefined();
+      expect(toolRegistry.get('web_search')).toBeDefined();
       expect(toolRegistry.get('work_plan')).toBeDefined();
     });
 
@@ -298,7 +298,7 @@ describe('Work Plan Tool', () => {
 
       // Should return success message
       expect(result).toContain('created');
-      expect(result).toContain('2 items');
+      expect(result).toContain('2 steps');
     });
 
     it('should complete work plan item', async () => {
@@ -331,7 +331,7 @@ describe('Work Plan Tool', () => {
         items: [{ id: 'step2', title: 'New step', order: 2 }]
       });
 
-      expect(result).toContain('revised');
+      expect(result).toContain('Revised');
     });
 
     it('should handle invalid command', async () => {
@@ -339,7 +339,7 @@ describe('Work Plan Tool', () => {
         command: 'invalid'
       });
 
-      expect(result).toContain('Unknown command');
+      expect(result).toContain('Unknown work_plan command');
     });
   });
 });
@@ -352,7 +352,7 @@ describe('Web Search Tool', () => {
       });
 
       // Web search is a placeholder
-      expect(result).toContain('searched for');
+      expect(result).toContain('Web search in progress');
       expect(result).toContain('test search');
     });
 
@@ -361,6 +361,7 @@ describe('Web Search Tool', () => {
         queries: ['query1', 'query2']
       });
 
+      expect(result).toContain('Web search in progress');
       expect(result).toContain('query1');
       expect(result).toContain('query2');
     });

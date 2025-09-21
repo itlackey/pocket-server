@@ -20,9 +20,9 @@ import { resolveDataPath } from '$lib/shared/paths.js';
 
 /**
  * Check if server is currently running
- * @returns {ServerStatus} Server status
+ * @returns {Promise<ServerStatus>} Server status
  */
-export function getServerStatus() {
+export async function getServerStatus() {
   const pidPath = resolveDataPath('runtime', 'server.pid');
   const timestamp = new Date().toISOString();
 
@@ -89,7 +89,7 @@ export async function waitForServer(port, timeoutMs = 10000) {
 
   while (Date.now() - startTime < timeoutMs) {
     try {
-      const response = await fetch(url, { timeout: 2000 });
+      const response = await fetch(url);
       if (response.ok) {
         return true;
       }
@@ -111,7 +111,7 @@ export async function waitForServer(port, timeoutMs = 10000) {
  */
 export async function getServerHealth(port) {
   try {
-    const response = await fetch(`http://localhost:${port}/api/health`, { timeout: 5000 });
+    const response = await fetch(`http://localhost:${port}/api/health`);
     if (response.ok) {
       return await response.json();
     }
@@ -126,7 +126,7 @@ export async function getServerHealth(port) {
  * @returns {Promise<Object>} Server information
  */
 export async function getServerInfo() {
-  const status = getServerStatus();
+  const status = await getServerStatus();
 
   if (!status.running) {
     return {
@@ -144,8 +144,8 @@ export async function getServerInfo() {
     try {
       // Try to get service status from various endpoints
       const [backgroundStatus, tunnelStatus] = await Promise.allSettled([
-        fetch(`http://localhost:${port}/api/background`, { timeout: 2000 }).then(r => r.ok ? r.json() : null),
-        fetch(`http://localhost:${port}/api/tunnel`, { timeout: 2000 }).then(r => r.ok ? r.json() : null)
+        fetch(`http://localhost:${port}/api/background`).then(r => r.ok ? r.json() : null),
+        fetch(`http://localhost:${port}/api/tunnel`).then(r => r.ok ? r.json() : null)
       ]);
 
       services = {

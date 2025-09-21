@@ -160,6 +160,14 @@ export async function processStream(
           } else if (block.type === 'tool_use') {
             currentToolUse = block;
             toolInputJsonBuffer = '';
+            
+            // Emit tool request start message
+            onMessage({
+              type: 'agent:tool_request_start',
+              sessionId,
+              toolId: block.id,
+              toolName: block.name
+            });
           }
           onStateUpdated?.(state);
           break;
@@ -316,6 +324,7 @@ export async function processStream(
     // Ensure state reflects the complete final message blocks, including thinking + signature
     try {
       state.contentBlocks = [...finalMessage.content];
+      state.finalMessage = normalizedFinal; // Store finalMessage in state for conversation history
     } catch {
       // ignore
     }

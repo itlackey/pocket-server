@@ -318,6 +318,14 @@
 							class="session-item"
 							class:active={selectedSession === session.id}
 							onclick={() => selectSession(session.id)}
+							onkeydown={(event) => {
+								if (event.key === 'Enter' || event.key === ' ') {
+									event.preventDefault();
+									selectSession(session.id);
+								}
+							}}
+							role="button"
+							tabindex="0"
 						>
 							<div class="session-info">
 								<div class="session-title">{session.title || session.id}</div>

@@ -10,7 +10,8 @@
 
 /**
  * @typedef {Object} WebSearchToolInput
- * @property {string} query - Search query
+ * @property {string} [query] - Single search query
+ * @property {string[]} [queries] - Multiple search queries
  */
 
 /**
@@ -66,7 +67,16 @@ export function createWebSearchTool(config) {
 export async function executeWebSearch(input, workingDir) {
   // Web search is handled by Anthropic API server-side
   // This is just a placeholder for consistency
-  return 'Web search in progress...';
+  
+  // Handle both single query and multiple queries
+  if (input.query) {
+    return `Web search in progress for: ${input.query}`;
+  } else if (input.queries && Array.isArray(input.queries)) {
+    const queryList = input.queries.join(', ');
+    return `Web search in progress for: ${queryList}`;
+  } else {
+    return 'Web search in progress...';
+  }
 }
 
 /**

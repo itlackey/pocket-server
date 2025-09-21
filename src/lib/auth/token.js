@@ -22,9 +22,12 @@ export async function verifyAccessToken(token) {
     
     // For demo purposes, extract deviceId from token
     // Real implementation would verify signature
-    const parts = token.split('-');
-    if (parts.length >= 2) {
-      return { deviceId: parts[0] };
+    // Token format: {deviceId}-{randomPart}
+    // DeviceId can contain hyphens, so find the last hyphen
+    const lastHyphenIndex = token.lastIndexOf('-');
+    if (lastHyphenIndex > 0 && lastHyphenIndex < token.length - 1) {
+      const deviceId = token.substring(0, lastHyphenIndex);
+      return { deviceId };
     }
     
     return null;
