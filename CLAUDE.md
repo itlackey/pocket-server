@@ -4,411 +4,193 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pocket Server is a Node.js + Hono WebSocket server that provides AI agent capabilities, file system operations, terminal management, and background agent orchestration. Built with TypeScript and ESM modules, it serves as the backend for the Pocket Agent mobile app.
+Dispatch Server is a SvelteKit application that provides a WebSocket server with AI agent capabilities, file system operations, and terminal management. It serves as the backend for the Pocket Agent mobile app, enabling mobile control of coding agents, terminals, and file operations.
 
 ## Architecture
 
-### Core Design Principles
-- **Event-driven mailbox pattern** - Each session has its own AgentRunner with strict ordering
-- **Server-authoritative storage** - All conversation data persisted to `data/sessions/`
-- **Streaming-first** - Optimized for real-time WebSocket streaming with frame aggregation
-- **Module isolation** - Clean separation between agent, auth, file system, and terminal modules
+### Tech Stack
+- **Framework**: SvelteKit with Node adapter
+- **WebSocket**: Custom WebSocket implementation via Vite plugin for dev, native ws in production
+- **AI Agents**: Supports Anthropic Claude and OpenAI GPT models
+- **Terminal**: node-pty for PTY sessions
+- **Type System**: JavaScript with JSDoc types (jsconfig.json)
 
-### Module Structure
+### Directory Structure
 
 ```
 src/
-├── agent/                       # AI agent orchestration
-│   ├── anthropic/              # Anthropic Claude implementation
-│   │   ├── anthropic.ts        # Main agent logic and streaming
-│   │   ├── prompt.ts           # System prompts and context
-│   │   ├── streaming.ts        # Stream event processing
-│   │   ├── title.ts            # Title generation
-│   │   ├── tools/              # Tool implementations
-│   │   │   ├── bash.ts         # Terminal command execution
-│   │   │   ├── editor.ts       # File editing operations
-│   │   │   └── web-search.ts   # Web search capability
-│   │   └── types.ts            # Anthropic API types
-│   ├── store/                  # Session persistence
-│   │   └── session-store-fs.ts # File-based session storage
-│   └── index.ts                # Agent module registration
-│
-├── auth/                       # Authentication & authorization
-│   ├── device-registry.ts     # Device management
-│   ├── middleware.ts           # Auth verification middleware
-│   ├── pairing.ts             # Local PIN pairing window
-│   ├── routes.ts              # Auth HTTP endpoints
-│   └── token.ts               # Token generation/validation
-│
-├── background-agent/           # Cloud agent integrations
-│   └── cursor/                # Cursor IDE integration
-│       ├── client.ts          # Cursor API client
-│       ├── github.ts          # GitHub integration
-│       ├── routes.ts          # Cursor HTTP endpoints
-│       ├── tracker.ts         # Agent status tracking
-│       └── types.ts           # Cursor-specific types
-│
-├── file-system/               # File operations
-│   ├── handlers.ts           # WebSocket handlers
-│   ├── service.ts            # Core file operations
-│   ├── telescope-search.ts   # Fast file search
-│   ├── terminal.ts           # Terminal command execution
-│   └── types.ts              # File system types
-│
-├── notifications/             # Push notifications
-│   └── index.ts              # Expo push integration
-│
-├── server/                    # Core server infrastructure
-│   ├── router.ts             # Custom Hono router adapter
-│   └── websocket.ts          # WebSocket management
-│
-├── shared/                    # Shared utilities
-│   ├── logger.ts             # Structured logging
-│   ├── paths.ts              # Path resolution utilities
-│   ├── public-url.ts         # Public URL management
-│   └── types/
-│       └── api.ts            # Shared API types
-│
-├── terminal/                  # Terminal management
-│   └── terminal-manager.ts   # PTY session management
-│
-├── tunnel/                    # Remote access
-│   └── cloudflare.ts         # Cloudflare quick tunnel
-│
-├── cli.ts                     # CLI entry point
-└── index.ts                   # Server entry point
+├── routes/               # SvelteKit routes and API endpoints
+│   └── +server.js       # Main server routes
+├── lib/                 # Core business logic
+│   ├── agent/           # AI agent implementation
+│   │   ├── anthropic/   # Anthropic Claude integration
+│   │   └── store/       # Session persistence
+│   ├── auth/            # Authentication & device pairing
+│   ├── file-system/     # File operations and search
+│   ├── terminal/        # Terminal management (PTY)
+│   └── shared/          # Shared utilities and types
+├── hooks.server.js      # SvelteKit server hooks
+└── server.js            # WebSocket server implementation
 ```
 
 ## Development Commands
 
 ```bash
-# Development with hot reload
-npm run dev              # tsx watch mode on port 3000
+# Development
+npm run dev              # Start Vite dev server on port 3000
+npm run preview          # Preview production build
 
-# Production build
-npm run build            # Bundle with esbuild to dist/
+# Building
+npm run build            # Build SvelteKit app to build/
 npm start                # Run production server
 
 # Testing
-npm test                 # Run all tests
-npm test -- src/foo.test.ts  # Run specific test
+npm test                 # Run Vitest tests
+npm run test:e2e         # Run Playwright E2E tests
+npm run test:e2e:headed  # Run Playwright with browser UI
+npm run test:e2e:debug   # Debug Playwright tests
+npm run test:coverage    # Run tests with coverage
+npm run test:all         # Run all tests (unit + E2E)
 
-# Linting (gates releases)
-npm run lint             # Biome linting with strict rules
+# Code Quality
+npm run lint             # Biome linting (strict, gates releases)
+npm run check            # SvelteKit sync and type checking
+npm run check:watch      # Watch mode for type checking
 
-# CLI commands
-npm run run start              # Start server
-npm run run start --remote     # Start with Cloudflare tunnel
-npm run run pair               # Open pairing window
-npm run run stop               # Stop server
-npm run run -- --help          # Show CLI usage
-npm run run update       # Update to latest version
+# Utilities
+npm run rebuild:native   # Rebuild node-pty native bindings
+npm run playwright:install # Install Playwright browsers
 ```
 
-## Key APIs and Protocols
+## WebSocket Protocol
 
-### WebSocket Protocol
-
-All WebSocket messages follow this envelope structure:
-```typescript
+All WebSocket messages follow this structure:
+```javascript
 {
-  v: number;              // Protocol version (currently 1)
-  type: string;           // Message type (namespaced)
-  id: string;             // Unique message ID
-  sessionId: string;      // Conversation/session scope
-  correlationId?: string; // Request/response pairing
-  ts: string;             // ISO timestamp
-  seq: number;            // Sequence number per session
-  payload?: unknown;      // Type-specific payload
+  v: 1,                    // Protocol version
+  type: string,            // Message type (namespaced)
+  id: string,              // Unique message ID
+  sessionId: string,       // Session identifier
+  correlationId?: string,  // Request/response pairing
+  ts: string,              // ISO timestamp
+  seq: number,             // Sequence number
+  payload?: any            // Type-specific payload
 }
 ```
 
-### Message Namespaces
-- `agent:*` - AI agent lifecycle and streaming
+Message namespaces:
+- `agent:*` - AI agent operations
 - `fs:*` - File system operations
 - `term:*` - Terminal I/O
 - `ws:*` - WebSocket meta events
-- `server:*` - Server status
-- `discovery:*` - Server discovery
+- `auth:*` - Authentication events
 
-### Authentication Flow
+## Authentication Flow
 
-1. **Pairing** (local-only):
-   ```
-   POST /auth/pair { pin: "1234" }
-   → { deviceId, secret }
-   ```
-
-2. **Token Generation**:
-   ```
-   POST /auth/challenge { deviceId }
-   → { nonce }
-   
-   POST /auth/token { deviceId, signature }
-   → { token }
-   ```
-   
-   Signature = `sha256(secret\ndeviceId\nnonce)`
-
-3. **Usage**:
-   - HTTP: `Authorization: Pocket <token>`
-   - WebSocket: `ws://host/ws?token=<token>`
-
-### Session Management
-
-Sessions are stored in `data/sessions/<id>/`:
-- `snapshot.json` - Current state
-- `events.jsonl` - Event log (append-only)
-
-Index at `data/sessions/index.json` for fast listing.
-
-## Adding New Features
-
-### New HTTP Endpoint
-1. Create handler in appropriate module
-2. Register route in module's index file:
-   ```typescript
-   router.POST('/path', async (req, res) => {
-     // Handler logic
-   });
-   ```
-3. Update `shared/types/api.ts` with request/response types
-4. Add to mobile client's `ServerEndpoints` if needed
-
-### New WebSocket Message Type
-1. Define type in `shared/types/api.ts`
-2. Add handler in `server/websocket.ts` or module handler
-3. Emit via `wsManager.send()` or `wsManager.broadcast()`
-4. Update mobile client's WebSocket handler
-
-### New Tool for Agent
-1. Create tool file in `agent/anthropic/tools/`
-2. Implement tool interface with schema and handler
-3. Register in `agent/anthropic/anthropic.ts`
-4. Add approval logic for max mode if needed
-
-## Performance Optimizations
-
-### Terminal Streaming
-- Frames aggregated every 8ms (120Hz target)
-- Max frame size: 32KB for low latency
-- 1MB backlog buffer per PTY session
-- Automatic cleanup on disconnect
-
-### WebSocket Management
-- Heartbeat ping/pong every 30s
-- Client-specific message routing
-- Broadcast capability for system events
-- Automatic reconnection handling
-
-### Session Storage
-- Write queue per session prevents conflicts
-- Snapshot-based recovery for fast restarts
-- Event log for audit trail
-- Automatic index updates
-
-## Security Considerations
-
-### Path Validation
-- All file operations restricted to HOME_DIR
-- Path traversal prevention
-- Symlink resolution checks
-
-### Token Security
-- Short-lived tokens (5 minutes)
-- HMAC-SHA256 signatures
-- Device-specific secrets
-- Automatic token refresh
-
-### Tool Safety
-- Danger check for destructive operations
-- Max mode allowlist for auto-approval
-- Explicit user approval for sensitive tools
-- Command timeout enforcement
+1. Device pairing (local network only)
+2. Token generation with HMAC-SHA256 signatures
+3. Short-lived tokens (5 minutes)
+4. HTTP: `Authorization: Pocket <token>`
+5. WebSocket: `?token=<token>` query parameter
 
 ## Testing Strategy
 
-### Unit Tests
-Location: Co-located with source files (`*.test.ts`)
-```bash
-npm test -- src/agent/anthropic/anthropic.test.ts
-```
-
-### Integration Points to Test
-- WebSocket message flow
-- Session persistence and recovery
-- Tool execution and approval
-- Auth token lifecycle
-- Terminal I/O streaming
+- **Unit tests**: Use Vitest, co-located with source files
+- **E2E tests**: Playwright in `tests/` directory
+- **Run specific test**: `npm test -- path/to/test.js`
+- **Debug E2E**: `npm run test:e2e:debug`
 
 ## Environment Variables
 
 ```bash
-# Required
-ANTHROPIC_API_KEY=sk-ant-...    # Claude API key
-
-# Optional
-PORT=3000                        # Server port
-CF_TUNNEL_TOKEN=...             # Cloudflare tunnel token
-CF_TUNNEL_CONFIG=...            # Tunnel configuration
+ANTHROPIC_API_KEY=sk-ant-...  # Anthropic Claude API
+OPENAI_API_KEY=sk-...         # OpenAI GPT API
+PORT=3000                      # Server port (default 3000)
 ```
 
-## CLI Operations
+## Adding New Features
 
-### Starting the Server
-```bash
-# Basic start
-pocket-server start
+### New API Endpoint
+1. Create `+server.js` in appropriate route directory
+2. Export handler functions (GET, POST, etc.)
+3. Use `$lib/shared/types/` for type definitions
 
-# With remote access
-pocket-server start --remote
+### New WebSocket Handler
+1. Add handler in `src/server.js` WebSocket connection handler
+2. Follow message envelope structure
+3. Use appropriate namespace for message type
 
-# Custom port
-pocket-server start --port 3010
-```
+### New AI Tool
+1. Create tool in `src/lib/agent/anthropic/tools/`
+2. Export tool with schema and handler
+3. Register in agent implementation
 
-### Pairing Devices
-```bash
-# Default 60s window
-pocket-server pair
+## Key Implementation Details
 
-# Custom duration and PIN
-pocket-server pair --duration=120000 --pin=9999
-```
+### WebSocket Streaming
+- Frame aggregation for terminal output
+- Heartbeat ping/pong every 30s
+- Automatic reconnection handling
 
-### Maintenance
-```bash
-# Stop server
-pocket-server stop
+### Session Management
+- Sessions stored in `data/sessions/`
+- Snapshot-based persistence
+- Event log for audit trail
 
-# Update to latest
-pocket-server update
+### Terminal Management
+- PTY sessions via node-pty
+- Output buffering and frame aggregation
+- Session attach/detach support
 
-# Check status
-pocket-server status
-```
+### File Operations
+- Path validation and traversal prevention
+- Fuzzy search with fuzzysort
+- Chokidar for file watching
 
 ## Common Patterns
 
-### Router Registration
-```typescript
-const router = createRouter('');
-router.GET('/path', handler);
-router.POST('/path', handler);
-app.route('/prefix', router.getApp());
+### Error Handling
+```javascript
+try {
+  // Operation
+  return { ok: true, result };
+} catch (error) {
+  logger.error('Module', 'operation failed', { error });
+  return { ok: false, error: error.message };
+}
 ```
 
-### WebSocket Broadcasting
-```typescript
-wsManager.broadcast({
+### WebSocket Message Sending
+```javascript
+ws.send(JSON.stringify({
   v: 1,
-  type: 'event:type',
-  id: crypto.randomUUID(),
-  sessionId: 'system',
+  type: 'namespace:event',
+  id: randomUUID(),
+  sessionId,
   ts: new Date().toISOString(),
-  seq: 0,
+  seq: sequenceNumber++,
   payload: data
-});
+}));
 ```
 
-### Session Store Usage
-```typescript
-const store = SessionStoreFs.getInstance();
-await store.createSession(id, { workingDir, maxMode });
-await store.recordUserMessage(id, content);
-const snapshot = await store.getSnapshot(id);
+### Type Definitions (JSDoc)
+```javascript
+/**
+ * @typedef {Object} MessageEnvelope
+ * @property {number} v - Protocol version
+ * @property {string} type - Message type
+ * @property {string} id - Unique ID
+ * @property {string} sessionId - Session ID
+ * @property {string} ts - ISO timestamp
+ * @property {number} seq - Sequence number
+ * @property {any} [payload] - Message payload
+ */
 ```
 
-### Tool Implementation
-```typescript
-export const toolName = {
-  schema: { /* JSON schema */ },
-  handler: async (params, context) => {
-    // Implementation
-    return { ok: true, result };
-  }
-};
-```
+## Debugging
 
-## Debugging Tips
-
-### Structured Logging
-```typescript
-logger.info('Module', 'action', { 
-  sessionId, 
-  messageId,
-  details 
-});
-```
-
-### WebSocket Inspection
-- Monitor `ws:*` events in logs
-- Check heartbeat responses
-- Verify sequence numbers
-
-### Session Debugging
-- Check `data/sessions/<id>/snapshot.json`
-- Review `events.jsonl` for history
-- Verify index.json consistency
-
-## Build and Release
-
-### Local Build
-```bash
-npm run build
-# Creates dist/index.js and dist/cli.js
-```
-
-### Release Process
-1. Biome lint validation
-2. Build with esbuild (ESM, Node 22)
-3. Prune dev dependencies
-4. Bundle Node runtime
-5. Create tarball
-6. Upload to Vercel Blob
-7. Update manifest
-
-### Distribution Layout
-```
-~/.pocket-server/
-├── bin/                 # CLI symlink
-├── current/            # Active version symlink
-├── releases/           # Version directories
-│   └── vX.Y.Z/
-│       ├── node        # Bundled Node runtime
-│       ├── dist/       # Server code
-│       └── package.json
-└── data/               # Persistent data
-    ├── sessions/       # Conversation storage
-    ├── auth/          # Device registry
-    └── runtime/       # PID files
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Port already in use**
-   - Check for existing process: `lsof -i :3000`
-   - Use different port: `PORT=3001 npm run dev`
-
-2. **WebSocket auth failures**
-   - Verify token in query string
-   - Check token expiry (5 minutes)
-   - Ensure device is paired
-
-3. **Terminal not responding**
-   - Check PTY session exists
-   - Verify frame aggregation working
-   - Look for backlog overflow
-
-4. **Session not found**
-   - Verify session exists in `data/sessions/`
-   - Check index.json for corruption
-   - Ensure proper session creation
-
-### Performance Monitoring
-- Watch frame aggregation efficiency
-- Monitor WebSocket message queue
-- Check session write queue depth
-- Track memory usage with large conversations
+- Check WebSocket messages in browser DevTools
+- Monitor server logs for errors
+- Use `npm run check` for type validation
+- Test WebSocket locally: `ws://localhost:3000/ws?token=<token>`
+- Review session data in `data/sessions/<id>/`

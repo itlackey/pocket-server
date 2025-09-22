@@ -1,9 +1,9 @@
-Pocket Server
+Dispatch Server
 =============
 
 An OS for your agents, built for your pocket.
 
-Pocket Server is the local runtime of Pocket — the mobile operating system for AI agents. It runs on your machine and exposes HTTP + WebSocket APIs so your phone can host, control, and collaborate with agents against your codebase in real time.
+Dispatch Server is the local runtime of Pocket — the mobile operating system for AI agents. It runs on your machine and exposes HTTP + WebSocket APIs so your phone can host, control, and collaborate with agents against your codebase in real time.
 
 Your coding agents, file system, and terminal — all in your pocket.
 
@@ -65,7 +65,7 @@ pocket-server start --remote
 Use it with the Pocket mobile app
 ---------------------------------
 
-1. Install Pocket Server (above)
+1. Install Dispatch Server (above)
 2. Download the mobile app and open it:
    - iOS (TestFlight): https://testflight.apple.com/join/ZHNpHgwd
    - Website: https://www.pocket-agent.xyz
@@ -120,7 +120,7 @@ Flags
 Terminal commands (resume sessions on desktop)
 ----------------------------------------------
 
-Pocket Server can attach your mobile terminal sessions on your desktop terminal. No pairing or token is required on your own machine — the CLI and server exchange a local secret under `~/.pocket-server/data/runtime/local-ws.key`.
+Dispatch Server can attach your mobile terminal sessions on your desktop terminal. No pairing or token is required on your own machine — the CLI and server exchange a local secret under `~/.pocket-server/data/runtime/local-ws.key`.
 
 ```
 # List active terminal sessions with indices

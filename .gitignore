@@ -11,6 +11,11 @@ dist/
 build/
 *.tsbuildinfo
 
+# SvelteKit
+.svelte-kit/
+.vercel/
+.vite/
+
 # Environment variables
 .env
 .env.local
@@ -61,3 +66,7 @@ temp/
 *.cer
 *.pfx
 *.der
+
+playwright-report/
+test-results/
+terminal-test.html
